@@ -1,7 +1,7 @@
-package utils
+package pkg
 
 import (
-	"goredis/utils/log"
+	"goredis/pkg/log"
 	"sync"
 	"time"
 )
