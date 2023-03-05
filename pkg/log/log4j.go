@@ -16,7 +16,7 @@ var (
 	logger             *log.Logger
 	syn                sync.Mutex
 	logPrefix          = ""
-	levelFlags         = []string{"DEBUG", "INFO", "WARN", "ERROR", "FATAL"}
+	levelFlags         = []string{"DEBUG", "INFO", "WARNING", "ERROR", "FATAL"}
 )
 
 const (
@@ -29,8 +29,8 @@ const (
 
 type logLevel int
 
-// NewSlf4j 初始化日志参数
-func NewSlf4j() {
+// NewLog4j 初始化日志参数
+func NewLog4j() {
 
 }
 

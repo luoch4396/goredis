@@ -6,10 +6,17 @@ import (
 	"github.com/go-netty/go-netty/codec/format"
 	"github.com/go-netty/go-netty/codec/frame"
 	"github.com/go-netty/go-netty/utils"
+	"time"
 )
 
+type Config struct {
+	Address  string        `config:"address"`
+	MaxConns uint16        `config:"max-conns"`
+	Timeout  time.Duration `config:"timeout"`
+}
+
 // NewNettyServer 实现一个netty server
-func NewNettyServer() {
+func NewNettyServer(config *Config) {
 	// setup child pipeline initializer.
 	childInitializer := func(channel netty.Channel) {
 		channel.Pipeline().
@@ -22,6 +29,6 @@ func NewNettyServer() {
 	var bootstrap = netty.NewBootstrap(netty.WithChildInitializer(childInitializer))
 
 	// setup bootstrap & startup server.
-	err := bootstrap.Listen("0.0.0.0:6379").Sync()
+	err := bootstrap.Listen(config.Address).Sync()
 	utils.Assert(err)
 }
