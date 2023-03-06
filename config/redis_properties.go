@@ -11,26 +11,26 @@ import (
 	"strings"
 )
 
-var GlobalProperties *GlobalServerProperties
-
-//默认配置
-var defaultProperties = &GlobalServerProperties{
-	Address:   "127.0.0.1",
-	Port:      6379,
-	MaxConns:  100,
-	Databases: 5,
-}
+var (
+	GlobalProperties  *GlobalServerProperties
+	defaultProperties = &GlobalServerProperties{
+		Address:   "127.0.0.1",
+		Port:      6379,
+		MaxConns:  100,
+		Databases: 5,
+	}
+)
 
 // GlobalServerProperties 定义redis 配置
 type GlobalServerProperties struct {
 	Address     string `config:"address"`
-	Port        int    `config:"port"`
+	Port        int64  `config:"port"`
 	MaxConns    int    `config:"max-conns"`
 	Databases   int    `config:"databases"`
 	CopyTimeout int    `config:"copy-timeout"`
 }
 
-func NewRedisProperties(globalConfigFileName string) {
+func NewConfig(globalConfigFileName string) {
 	//配置文件不存在，获取默认配置
 	if !utils.FileIsExist(globalConfigFileName) {
 		GlobalProperties = defaultProperties
