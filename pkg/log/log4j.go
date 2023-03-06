@@ -47,7 +47,17 @@ func Warning(message string, v ...interface{}) {
 }
 
 func Error(message string, v ...interface{}) {
-	basePrintLog(ERROR, message, v)
+	if nil == v {
+		return
+	}
+	syn.Lock()
+	defer syn.Unlock()
+	setPrefix(ERROR)
+	if len(message) <= 0 {
+		panic(v)
+	} else {
+		logger.Println(fmt.Sprintf(message, v...))
+	}
 }
 
 func Fatal(message string, v ...interface{}) {

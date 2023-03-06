@@ -9,19 +9,27 @@ type EchoHandler struct {
 	role string
 }
 
+// HandleActive 开启处理器
 func (l EchoHandler) HandleActive(ctx netty.ActiveContext) {
 	fmt.Println(l.role, "->", "active:", ctx.Channel().RemoteAddr())
-
 	ctx.Write("Hello I'm " + l.role)
-	ctx.HandleActive()
+	//ctx.HandleActive()
 }
 
+// HandleRead 读取数据处理器
 func (l EchoHandler) HandleRead(ctx netty.InboundContext, message netty.Message) {
 	fmt.Println(l.role, "->", "handle read:", message)
-	ctx.HandleRead(message)
+	//ctx.HandleRead(message)
 }
 
+// HandleWrite 发送数据处理器
+func (l EchoHandler) HandleWrite(ctx netty.OutboundContext, message netty.Message) {
+	fmt.Println(l.role, "->", "handle read:", message)
+	//ctx.HandleRead(message)
+}
+
+// HandleInactive 关闭处理器
 func (l EchoHandler) HandleInactive(ctx netty.InactiveContext, ex netty.Exception) {
 	fmt.Println(l.role, "->", "inactive:", ctx.Channel().RemoteAddr(), ex)
-	ctx.HandleInactive(ex)
+	//ctx.HandleInactive(ex)
 }

@@ -24,7 +24,7 @@ func main() {
 	//创建配置文件解析器
 	config.NewConfig("redis.properties")
 	//开启tcp服务
-	server.NewNettyServer(&server.Config{
+	server.NewRedisServer(&server.Config{
 		Address: utils.NewStringBuilder(config.GlobalProperties.Address,
 			":", strconv.FormatInt(config.GlobalProperties.Port, 10)),
 	})

@@ -43,7 +43,7 @@ func NewConfig(globalConfigFileName string) {
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
-			log.Error("error closing redis config file, program exit", err)
+			log.Error("exception closing redis config file, program exit", err)
 			return
 		}
 	}(file)
