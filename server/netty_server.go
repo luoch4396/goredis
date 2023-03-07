@@ -1,10 +1,7 @@
 package server
 
 import (
-	"encoding/binary"
 	"github.com/go-netty/go-netty"
-	"github.com/go-netty/go-netty/codec/format"
-	"github.com/go-netty/go-netty/codec/frame"
 	"goredis/db"
 	"goredis/pkg/log"
 	"time"
@@ -21,13 +18,14 @@ func NewRedisServer(config *Config) {
 	// setup child pipeline initializer.
 	childInitializer := func(channel netty.Channel) {
 		channel.Pipeline().
-			AddLast(frame.LengthFieldCodec(binary.LittleEndian, 1024, 0, 2, 0, 2)).
-			AddLast(format.TextCodec()).
-			AddLast(EchoHandler{"Server"})
+			//AddLast(frame.LengthFieldCodec(binary.LittleEndian, 1024, 0, 2, 0, 2)).
+			//AddLast(format.TextCodec()).
+			AddLast(EchoHandler{"RedisServer"})
 	}
 	// new bootstrap
 	var bootstrap = netty.NewBootstrap(netty.WithChildInitializer(childInitializer))
 	// setup bootstrap & startup server.
+	println("redis服务启动地址:", config.Address)
 	var listener = bootstrap.Listen(config.Address)
 	err := listener.Sync()
 	if err != nil {

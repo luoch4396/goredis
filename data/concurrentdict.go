@@ -23,13 +23,13 @@ type dictShard struct {
 
 func NewConcurrentDict(shardCount int) *ConcurrentDict {
 	shardCount = computeCapacity(shardCount)
-	table := make([]*dictShard, shardCount)
+	var table = make([]*dictShard, shardCount)
 	for i := 0; i < shardCount; i++ {
 		table[i] = &dictShard{
 			table: make(map[string]interface{}),
 		}
 	}
-	concurrentDict := &ConcurrentDict{
+	var concurrentDict = &ConcurrentDict{
 		count:      0,
 		dictShard:  table,
 		shardCount: shardCount,
@@ -39,9 +39,9 @@ func NewConcurrentDict(shardCount int) *ConcurrentDict {
 
 func computeCapacity(param int) (size int) {
 	if param <= 16 {
-		return 16
+		return 2 << 3
 	}
-	n := param - 1
+	var n = param - 1
 	n |= n >> 1
 	n |= n >> 2
 	n |= n >> 4
@@ -55,7 +55,7 @@ func computeCapacity(param int) (size int) {
 
 func (dict *ConcurrentDict) spread(hashCode uint32) uint32 {
 	exception.NewNullPointerException(dict, "dict")
-	tableSize := uint32(len(dict.dictShard))
+	var tableSize = uint32(len(dict.dictShard))
 	return (tableSize - 1) & hashCode
 }
 
@@ -70,12 +70,11 @@ func (dict *ConcurrentDict) addCount() int32 {
 
 func (dict *ConcurrentDict) Put(key string, value interface{}) (result bool) {
 	exception.NewNullPointerException(dict, "dict")
-	hashCode := hasher.Sum32([]byte(key))
-	index := dict.spread(hashCode)
-	s := dict.getShard(index)
+	var hashCode = hasher.Sum32([]byte(key))
+	var index = dict.spread(hashCode)
+	var s = dict.getShard(index)
 	s.readWriteLock.Lock()
 	defer s.readWriteLock.Unlock()
-
 	if _, ok := s.table[key]; ok {
 		s.table[key] = value
 		return true
@@ -103,12 +102,11 @@ func (dict *ConcurrentDict) Get(key string) (value interface{}, exists bool) {
 
 func (dict *ConcurrentDict) PutIfAbsent(key string, value interface{}) (result bool) {
 	exception.NewNullPointerException(dict, "dict")
-	hashCode := hasher.Sum32([]byte(key))
-	index := dict.spread(hashCode)
-	s := dict.getShard(index)
+	var hashCode = hasher.Sum32([]byte(key))
+	var index = dict.spread(hashCode)
+	var s = dict.getShard(index)
 	s.readWriteLock.Lock()
 	defer s.readWriteLock.Unlock()
-
 	if _, ok := s.table[key]; ok {
 		return true
 	}
@@ -118,12 +116,11 @@ func (dict *ConcurrentDict) PutIfAbsent(key string, value interface{}) (result b
 }
 func (dict *ConcurrentDict) PutIfPresent(key string, value interface{}) (result bool) {
 	exception.NewNullPointerException(dict, "dict")
-	hashCode := hasher.Sum32([]byte(key))
-	index := dict.spread(hashCode)
-	s := dict.getShard(index)
+	var hashCode = hasher.Sum32([]byte(key))
+	var index = dict.spread(hashCode)
+	var s = dict.getShard(index)
 	s.readWriteLock.Lock()
 	defer s.readWriteLock.Unlock()
-
 	if _, ok := s.table[key]; ok {
 		s.table[key] = value
 		return false
@@ -135,20 +132,23 @@ func (dict *ConcurrentDict) Remove(key string) (result bool) {
 	return false
 }
 
-func (dict *ConcurrentDict) ForEach(consumer data.Consumer) {
+func (dict *ConcurrentDict) ForEach(consumer data.DictConsumer) {
 	exception.NewNullPointerException(dict, "dict")
-
-	for _, s := range dict.dictShard {
-		s.readWriteLock.RLock()
-		func() {
-			defer s.readWriteLock.RUnlock()
-			for key, value := range s.table {
-				continues := consumer(key, value)
-				if !continues {
-					return
+	for _, shard := range dict.dictShard {
+		shard.readWriteLock.RLock()
+		res := func() bool {
+			defer shard.readWriteLock.RUnlock()
+			for key, value := range shard.table {
+				var isNext = consumer(key, value)
+				if !isNext {
+					return false
 				}
 			}
-		}()
+			return true
+		}
+		if !res() {
+			break
+		}
 	}
 }
 

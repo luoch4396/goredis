@@ -5,23 +5,30 @@ import (
 	"sync/atomic"
 )
 
+var (
+	//暂不支持的命令行操作
+	unknownOperation = []byte("-ERR unknown\r\n")
+)
+
 type SingleServer struct {
-	dbs  []*atomic.Value //db
+	//db数组
+	dbs []*atomic.Value
+	//角色（主、从）
 	role int32
 }
 
-// NewSingleServer 创建一个单机redis服务
+// NewSingleServer 创建一个简单的单机redis服务
 func NewSingleServer() *SingleServer {
 	var singleServer = &SingleServer{}
 	if config.GlobalProperties.Databases == 0 {
 		config.GlobalProperties.Databases = 8
 	}
 	for i := range singleServer.dbs {
-		//singleDB := makeDB()
-		//singleDB.index = i
-		var holder = &atomic.Value{}
-		//holder.Store(singleDB)
-		singleServer.dbs[i] = holder
+		var singleDB = newDB()
+		singleDB.index = i
+		var oneDb = &atomic.Value{}
+		oneDb.Store(singleDB)
+		singleServer.dbs[i] = oneDb
 	}
 	return singleServer
 }

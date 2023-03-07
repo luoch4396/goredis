@@ -26,6 +26,6 @@ func main() {
 	//开启tcp服务
 	server.NewRedisServer(&server.Config{
 		Address: utils.NewStringBuilder(config.GlobalProperties.Address,
-			":", strconv.FormatInt(config.GlobalProperties.Port, 10)),
+			":", strconv.FormatInt(int64(config.GlobalProperties.Port), 10)),
 	})
 }

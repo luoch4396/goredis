@@ -24,7 +24,7 @@ var (
 // GlobalServerProperties 定义redis 配置
 type GlobalServerProperties struct {
 	Address     string `config:"address"`
-	Port        int64  `config:"port"`
+	Port        int    `config:"port"`
 	MaxConns    int    `config:"max-conns"`
 	Databases   int    `config:"databases"`
 	CopyTimeout int    `config:"copy-timeout"`
