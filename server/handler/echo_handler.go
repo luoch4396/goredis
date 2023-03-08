@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"fmt"
@@ -11,14 +11,21 @@ type EchoHandler struct {
 
 // HandleActive 开启处理器
 func (l EchoHandler) HandleActive(ctx netty.ActiveContext) {
-	fmt.Println(l.role, "->", "active:", ctx.Channel().RemoteAddr())
+	var channel = ctx.Channel()
+	if !channel.IsActive() {
+		return
+	}
+	//fmt.Println(l.role, "->", "active:", ctx.Channel().RemoteAddr())
+	//
 	//ctx.Write([]byte("-ERR unknown\r\n"))
-	//ctx.HandleActive()
 }
 
 // HandleRead 读取数据处理器
 func (l EchoHandler) HandleRead(ctx netty.InboundContext, message netty.Message) {
-	fmt.Println(l.role, "->", "handle read:", message)
+	var channel = ctx.Channel()
+	if !channel.IsActive() {
+		return
+	}
 	//ctx.HandleRead(message)
 }
 

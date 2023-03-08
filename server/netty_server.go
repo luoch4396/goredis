@@ -4,6 +4,7 @@ import (
 	"github.com/go-netty/go-netty"
 	"goredis/db"
 	"goredis/pkg/log"
+	"goredis/server/handler"
 	"time"
 )
 
@@ -16,18 +17,17 @@ type Config struct {
 // NewRedisServer 实现一个netty server
 func NewRedisServer(config *Config) {
 	// setup child pipeline initializer.
-	childInitializer := func(channel netty.Channel) {
+	var childInitializer = func(channel netty.Channel) {
 		channel.Pipeline().
-			//AddLast(frame.LengthFieldCodec(binary.LittleEndian, 1024, 0, 2, 0, 2)).
-			//AddLast(format.TextCodec()).
-			AddLast(EchoHandler{"RedisServer"})
+			AddLast(handler.RedisCodec()).
+			AddLast(handler.EchoHandler{})
 	}
 	// new bootstrap
 	var bootstrap = netty.NewBootstrap(netty.WithChildInitializer(childInitializer))
 	// setup bootstrap & startup server.
 	println("redis服务启动地址:", config.Address)
 	var listener = bootstrap.Listen(config.Address)
-	err := listener.Sync()
+	var err = listener.Sync()
 	if err != nil {
 		var err = listener.Close()
 		if err != nil {

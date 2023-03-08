@@ -21,7 +21,8 @@ type SingleServer struct {
 func NewSingleServer() *SingleServer {
 	var singleServer = &SingleServer{}
 	if config.GlobalProperties.Databases == 0 {
-		config.GlobalProperties.Databases = 8
+		//redis 默认16个数据库
+		config.GlobalProperties.Databases = 16
 	}
 	for i := range singleServer.dbs {
 		var singleDB = newDB()

@@ -1,6 +1,11 @@
 package utils
 
 import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"github.com/go-netty/go-netty"
+	"io"
 	"os"
 	"strings"
 )
@@ -19,4 +24,33 @@ func NewStringBuilder(strs ...string) string {
 		stringBuilder.WriteString(strs[i])
 	}
 	return stringBuilder.String()
+}
+
+func NewStringBuilder0(bytes ...[]byte) string {
+	var stringBuilder strings.Builder
+	for i := 0; i < len(bytes); i++ {
+		stringBuilder.Write(bytes[i])
+	}
+	return stringBuilder.String()
+}
+
+func ParseMessage(message netty.Message) ([]byte, error) {
+	switch r := message.(type) {
+	case io.Reader:
+		var reader = bufio.NewReader(r)
+		line, err := reader.ReadBytes('\n')
+		return line, err
+	case []byte:
+		return r, nil
+	case [][]byte:
+		buffer := bytes.NewBuffer(nil)
+		for _, b := range r {
+			buffer.Write(b)
+		}
+		return buffer.Bytes(), nil
+	case string:
+		return []byte(r), nil
+	default:
+		return nil, fmt.Errorf("unrecognized type: %T", message)
+	}
 }
