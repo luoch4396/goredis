@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"goredis/config"
 	"sync/atomic"
 )
@@ -31,5 +32,6 @@ func NewSingleServer() *SingleServer {
 		oneDb.Store(singleDB)
 		singleServer.dbs[i] = oneDb
 	}
+	fmt.Print("create default 16 databases redis success!")
 	return singleServer
 }

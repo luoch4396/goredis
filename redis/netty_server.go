@@ -1,10 +1,10 @@
-package server
+package redis
 
 import (
 	"github.com/go-netty/go-netty"
 	"goredis/db"
 	"goredis/pkg/log"
-	"goredis/server/handler"
+	"goredis/redis/handler"
 	"time"
 )
 
@@ -14,17 +14,18 @@ type Config struct {
 	Timeout  time.Duration `config:"timeout"`
 }
 
-// NewRedisServer 实现一个netty server
+// NewRedisServer 实现一个netty redis
 func NewRedisServer(config *Config) {
 	// setup child pipeline initializer.
 	var childInitializer = func(channel netty.Channel) {
 		channel.Pipeline().
-			AddLast(handler.RedisCodec()).
-			AddLast(handler.EchoHandler{})
+			AddLast(handler.EchoHandler{}).
+			AddLast(handler.RedisCodec())
+
 	}
 	// new bootstrap
 	var bootstrap = netty.NewBootstrap(netty.WithChildInitializer(childInitializer))
-	// setup bootstrap & startup server.
+	// setup bootstrap & startup redis.
 	println("redis服务启动地址:", config.Address)
 	var listener = bootstrap.Listen(config.Address)
 	var err = listener.Sync()

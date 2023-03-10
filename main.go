@@ -4,7 +4,7 @@ import (
 	"goredis/config"
 	"goredis/pkg/log"
 	"goredis/pkg/utils"
-	"goredis/server"
+	"goredis/redis"
 	"strconv"
 )
 
@@ -24,7 +24,7 @@ func main() {
 	//创建配置文件解析器
 	config.NewConfig("redis.properties")
 	//开启tcp服务
-	server.NewRedisServer(&server.Config{
+	redis.NewRedisServer(&redis.Config{
 		Address: utils.NewStringBuilder(config.GlobalProperties.Address,
 			":", strconv.FormatInt(int64(config.GlobalProperties.Port), 10)),
 	})
