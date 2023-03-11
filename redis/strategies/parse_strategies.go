@@ -6,27 +6,23 @@ import (
 	"goredis/interface/tcp"
 	"goredis/pkg/utils"
 	"goredis/redis/request"
+	_interface "goredis/redis/strategies/interface"
 	"io"
 	"strconv"
 )
 
-// ParseStrategy 解析策略接口
-type ParseStrategy interface {
-	do(reader *bufio.Reader, lineBytes []byte) *tcp.Request
-}
-
 type Operator struct {
-	ParseStrategy ParseStrategy
+	ParseStrategy _interface.ParseStrategy
 }
 
 func (operator *Operator) DoStrategy(reader *bufio.Reader, lineBytes []byte) *tcp.Request {
-	return operator.ParseStrategy.do(reader, lineBytes)
+	return operator.ParseStrategy.Do(reader, lineBytes)
 }
 
 // BulkStringsStrategy 解析多行字符串
 type BulkStringsStrategy struct{}
 
-func (*BulkStringsStrategy) do(reader *bufio.Reader, lineBytes []byte) *tcp.Request {
+func (*BulkStringsStrategy) Do(reader *bufio.Reader, lineBytes []byte) *tcp.Request {
 	strLen, err := strconv.ParseInt(string(lineBytes[1:]), 10, 64)
 	var redisRequest = &tcp.Request{}
 	if err != nil || strLen < -1 {

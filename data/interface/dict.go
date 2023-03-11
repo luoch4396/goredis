@@ -1,4 +1,4 @@
-package data
+package _interface
 
 type DictConsumer func(key string, val interface{}) bool
 

@@ -27,7 +27,7 @@ func (*redisCodec) CodecName() string {
 func (*redisCodec) HandleRead(ctx netty.InboundContext, message netty.Message) {
 	//go parse(ctx, message)
 	ch := make(chan *tcp.Request)
-	go parse(message)
+	go parse(message, ch)
 	//ctx.Write(message)
 }
 
@@ -113,6 +113,4 @@ func parse(message netty.Message, ch chan<- *tcp.Request) {
 			println("收到数据4", args)
 		}
 	}
-	return requests, nil
-	//RedisUtils.NewStringBuilder0(textBytes)
 }

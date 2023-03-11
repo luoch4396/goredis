@@ -1,4 +1,4 @@
-package data
+package _interface
 
 type ListConsumer func(i int, v interface{}) bool
 

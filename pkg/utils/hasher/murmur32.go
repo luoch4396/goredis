@@ -101,19 +101,19 @@ func (d *digest32) Sum32() (h1 uint32) {
 	return h1
 }
 
-// Sum32 returns the MurmurHash3 sum of data. It is equivalent to the
+// Sum32 returns the MurmurHash3 sum of interface. It is equivalent to the
 // following sequence (without the extra burden and the extra allocation):
 //     hasher := New32()
-//     hasher.Write(data)
+//     hasher.Write(interface)
 //     return hasher.Sum32()
 func Sum32(data []byte) uint32 {
 	return Sum32WithSeed(data, 0)
 }
 
-// Sum32WithSeed returns the MurmurHash3 sum of data. It is equivalent to the
+// Sum32WithSeed returns the MurmurHash3 sum of interface. It is equivalent to the
 // following sequence (without the extra burden and the extra allocation):
 //     hasher := New32WithSeed(seed)
-//     hasher.Write(data)
+//     hasher.Write(interface)
 //     return hasher.Sum32()
 func Sum32WithSeed(data []byte, seed uint32) uint32 {
 

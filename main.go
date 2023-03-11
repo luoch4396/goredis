@@ -5,6 +5,7 @@ import (
 	"goredis/pkg/log"
 	"goredis/pkg/utils"
 	"goredis/redis"
+	"os"
 	"strconv"
 )
 
@@ -20,7 +21,9 @@ func main() {
 	//打印banner
 	print(banner)
 	//初始化日志模块
-	log.NewLog4j()
+	log.WithLevel(log.DEBUG)
+	log.WithOutput(os.Stdout)
+	log.NewLogger()
 	//创建配置文件解析器
 	config.NewConfig("redis.properties")
 	//开启tcp服务

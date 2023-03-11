@@ -43,7 +43,7 @@ func NewConfig(globalConfigFileName string) {
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
-			log.Error("exception closing redis config file, program exit", err)
+			log.Errorf("exception closing redis config file, program exit", err)
 			return
 		}
 	}(file)
@@ -69,7 +69,7 @@ func parse(src io.Reader) *GlobalServerProperties {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		log.Fatal(``, err)
+		log.Fatalf(``, err)
 	}
 
 	//使用反射去解析具体配置参数

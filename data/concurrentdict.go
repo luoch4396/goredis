@@ -1,7 +1,7 @@
 package data
 
 import (
-	"goredis/interface/data"
+	"goredis/data/interface"
 	"goredis/pkg/exception"
 	"goredis/pkg/utils/hasher"
 	"math"
@@ -132,7 +132,7 @@ func (dict *ConcurrentDict) Remove(key string) (result bool) {
 	return false
 }
 
-func (dict *ConcurrentDict) ForEach(consumer data.DictConsumer) {
+func (dict *ConcurrentDict) ForEach(consumer _interface.DictConsumer) {
 	exception.NewNullPointerException(dict, "dict")
 	for _, shard := range dict.dictShard {
 		shard.readWriteLock.RLock()

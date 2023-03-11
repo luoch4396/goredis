@@ -2,7 +2,7 @@ package db
 
 import (
 	data2 "goredis/data"
-	"goredis/interface/data"
+	"goredis/data/interface"
 )
 
 const (
@@ -15,9 +15,9 @@ const (
 // DB 定义redis的db
 type DB struct {
 	index      int
-	data       data.Dict
-	ttlMap     data.Dict
-	versionMap data.Dict
+	data       _interface.Dict
+	ttlMap     _interface.Dict
+	versionMap _interface.Dict
 }
 
 func newDB() *DB {

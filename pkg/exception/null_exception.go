@@ -1,6 +1,9 @@
 package exception
 
-import "goredis/pkg/utils"
+import (
+	"goredis/pkg/log"
+	"goredis/pkg/utils"
+)
 
 type NullPointerException struct {
 	message string
@@ -21,6 +24,6 @@ func CheckIsNotNull(name string) (bool, error) {
 
 func NewNullPointerException(object interface{}, message string) {
 	if object == nil {
-		panic(utils.NewStringBuilder(message, "must be not null!"))
+		log.Error(utils.NewStringBuilder(message, "must be not null!"))
 	}
 }

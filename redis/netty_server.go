@@ -26,13 +26,13 @@ func NewRedisServer(config *Config) {
 	// new bootstrap
 	var bootstrap = netty.NewBootstrap(netty.WithChildInitializer(childInitializer))
 	// setup bootstrap & startup redis.
-	println("redis服务启动地址:", config.Address)
+	log.Info("start goredis server success: " + config.Address + ", start listening...")
 	var listener = bootstrap.Listen(config.Address)
 	var err = listener.Sync()
 	if err != nil {
 		var err = listener.Close()
 		if err != nil {
-			log.Error("", err)
+			log.Errorf("", err)
 			return
 		}
 	}

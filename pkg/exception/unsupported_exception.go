@@ -1,5 +1,7 @@
 package exception
 
+import "goredis/pkg/log"
+
 type UnsupportedException struct {
 	message string
 }
@@ -9,9 +11,9 @@ func (e *UnsupportedException) Error() string {
 }
 
 func NewUnsupportedException() {
-	panic("unsupported operation")
+	log.Error("unsupported operation, please check")
 }
 
 func NewUnsupportedException0(message string) {
-	panic(message)
+	log.Error(message)
 }
