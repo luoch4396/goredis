@@ -2,14 +2,10 @@ package log
 
 import (
 	"bytes"
-	"os"
 	"testing"
 )
 
 func formatOutput(t *testing.T, testLevel Level, format string, args ...interface{}) {
-	buf := new(bytes.Buffer)
-	WithOutput(buf)
-	defer WithOutput(os.Stderr)
 	switch testLevel {
 	case DEBUG:
 		Debugf(format, args...)
@@ -27,12 +23,17 @@ func formatOutput(t *testing.T, testLevel Level, format string, args ...interfac
 }
 
 func TestOutput(t *testing.T) {
-	l := NewLogger()
-	oldFlags := l.stdLog.Flags()
-	l.stdLog.SetFlags(0)
-	defer l.stdLog.SetFlags(oldFlags)
-	WithLevel(INFO)
-
+	buf := new(bytes.Buffer)
+	var fs = &FileSettings{
+		Path:     "logs",
+		FileName: "2022",
+	}
+	builder := &LoggerBuilder{}
+	builder.
+		BuildOutput(buf).
+		BuildLevel("INFO").
+		BuildFile(fs).
+		Build()
 	tests := []struct {
 		format      string
 		args        []interface{}

@@ -16,32 +16,52 @@ var logger = Logger{
 	w:     os.Stderr,
 }
 
-// NewLogger Build 初始化日志参数
-func NewLogger() *Logger {
+// Build 初始化日志参数
+func (builder *LoggerBuilder) Build() *Logger {
+	wm := builder.logger.wm
+	w := builder.logger.w
+	if wm != nil {
+		builder.logger.stdLog = log.New(wm, "", log.LstdFlags|log.Lshortfile|log.Lmicroseconds)
+	} else {
+		builder.logger.stdLog = log.New(logger.w, "", log.LstdFlags|log.Lshortfile|log.Lmicroseconds)
+	}
+	builder.logger.stdLog.SetOutput(w)
+	logger = builder.logger
 	return &logger
 }
 
-func WithOutput(w io.Writer) {
-	logger.stdLog.SetOutput(w)
-	logger.w = w
+func (builder *LoggerBuilder) BuildOutput(w io.Writer) *LoggerBuilder {
+	builder.logger.w = w
+	return builder
 }
 
-func WithLevel(lv Level) {
-	logger.level = lv
+func (builder *LoggerBuilder) BuildLevel(lv string) *LoggerBuilder {
+	switch lv {
+	case "DEBUG":
+		builder.logger.level = DEBUG
+	case "INFO":
+		builder.logger.level = INFO
+	case "WARNING":
+		builder.logger.level = WARNING
+	case "ERROR":
+		builder.logger.level = ERROR
+	case "FATAL":
+		builder.logger.level = FATAL
+	}
+	return builder
 }
 
-func WithFile(settings FileSettings) {
-	var err error
+func (builder *LoggerBuilder) BuildFile(settings *FileSettings) *LoggerBuilder {
 	fileName := fmt.Sprintf("%s-%s.%s",
-		settings.fileName,
+		settings.FileName,
 		time.Now().Format("2006-01-02"),
 		"logs")
-	logFile, err := utils.CreateIfNotExists(fileName, settings.path)
+	logFile, err := utils.CreateIfNotExist(fileName, settings.Path)
 	if err != nil {
-		Fatalf("logger.WithFile error: %s", err)
+		_ = fmt.Errorf("logger.WithFile error: %s", err)
 	}
-	mw := io.MultiWriter(logger.w, logFile)
-	logger.stdLog = log.New(mw, "", log.LstdFlags|log.Lshortfile|log.Lmicroseconds)
+	builder.logger.wm = io.MultiWriter(logger.w, logFile)
+	return builder
 }
 
 func Debug(message string) {

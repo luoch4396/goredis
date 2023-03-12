@@ -25,15 +25,24 @@ var levels = []string{
 type Level int
 
 type Logger struct {
-	stdLog *log.Logger
-	level  Level
-	w      io.Writer
+	stdLog *log.Logger //日志
+	level  Level       //日志级别
+	w      io.Writer   //日志输出
+	wm     io.Writer   //文件输出
 }
 
 type FileSettings struct {
-	fileName string
-	path     string
+	FileName string
+	Path     string
+}
+
+type Builder interface {
+	Build() *Logger
+	BuildLevel(lv string) *LoggerBuilder
+	BuildOutput(w io.Writer) *LoggerBuilder
+	BuildFile(settings *FileSettings) *LoggerBuilder
 }
 
 type LoggerBuilder struct {
+	logger Logger
 }

@@ -17,7 +17,7 @@ func mkDir(src string) error {
 	return os.MkdirAll(src, os.ModePerm)
 }
 
-func CreateIfNotExists(fileName, dir string) (*os.File, error) {
+func CreateIfNotExist(fileName, dir string) (*os.File, error) {
 	if CheckPermission(dir) {
 		return nil, fmt.Errorf("permission denied dir: %s", dir)
 	}

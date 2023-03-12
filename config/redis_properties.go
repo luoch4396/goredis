@@ -28,6 +28,9 @@ type GlobalServerProperties struct {
 	MaxConns    int    `config:"max-conns"`
 	Databases   int    `config:"databases"`
 	CopyTimeout int    `config:"copy-timeout"`
+	LogLevel    string `config:"log-level"`
+	LogFilePath string `config:"Log-file-path"`
+	LogFileName string `config:"Log-file-name"`
 }
 
 func NewConfig(globalConfigFileName string) {
@@ -100,8 +103,5 @@ func parse(src io.Reader) *GlobalServerProperties {
 			}
 		}
 	}
-	//log.Info(fmt.Sprint(config.Port))
-	//todo: 开启服务的时候打印一下配置信息
-	//fmt.Print(config.Port)
 	return config
 }
