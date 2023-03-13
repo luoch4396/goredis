@@ -16,6 +16,10 @@ var logger = Logger{
 	w:     os.Stderr,
 }
 
+func NewLoggerBuilder() Builder {
+	return new(LoggerBuilder)
+}
+
 // Build 初始化日志参数
 func (builder *LoggerBuilder) Build() *Logger {
 	wm := builder.logger.wm
