@@ -2,7 +2,6 @@ package log
 
 import (
 	"fmt"
-	"goredis/pkg/utils"
 	"io"
 	"log"
 	"os"
@@ -10,7 +9,7 @@ import (
 	"time"
 )
 
-//log日志默认配置
+// log日志默认配置
 var logger = Logger{
 	level: INFO,
 	w:     os.Stderr,
@@ -60,7 +59,7 @@ func (builder *LoggerBuilder) BuildFile(settings *FileSettings) *LoggerBuilder {
 		settings.FileName,
 		time.Now().Format("2006-01-02"),
 		"logs")
-	logFile, err := utils.CreateIfNotExist(fileName, settings.Path)
+	logFile, err := CreateIfNotExist(fileName, settings.Path)
 	if err != nil {
 		_ = fmt.Errorf("logger.WithFile error: %s", err)
 	}
