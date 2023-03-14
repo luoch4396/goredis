@@ -17,7 +17,7 @@ var logger = Logger{
 }
 
 func NewLoggerBuilder() Builder {
-	return new(LoggerBuilder)
+	return &LoggerBuilder{}
 }
 
 // Build 初始化日志参数

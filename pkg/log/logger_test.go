@@ -28,8 +28,7 @@ func TestOutput(t *testing.T) {
 		Path:     "logs",
 		FileName: "2022",
 	}
-	builder := &LoggerBuilder{}
-	builder.
+	NewLoggerBuilder().
 		BuildOutput(buf).
 		BuildLevel("INFO").
 		BuildFile(fs).
@@ -44,7 +43,7 @@ func TestOutput(t *testing.T) {
 		{"%s %s", []interface{}{"LevelInfo", "test"}, INFO, WARNING, ""},
 		{"%s%s", []interface{}{"LevelDebug", "Test"}, DEBUG, DEBUG, levels[DEBUG] + "LevelDebugTest\n"},
 		{"%s", []interface{}{"LevelError test"}, ERROR, INFO, levels[ERROR] + "LevelError test\n"},
-		{"%s", []interface{}{"LevelWarn test"}, WARNING, WARNING, levels[WARNING] + "LevelWarn test\n"},
+		{"%s", []interface{}{"LevelWarning test"}, WARNING, WARNING, levels[WARNING] + "LevelWarning test\n"},
 	}
 
 	for _, tt := range tests {

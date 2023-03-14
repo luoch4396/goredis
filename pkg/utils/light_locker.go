@@ -7,28 +7,33 @@ import (
 )
 
 type LightLocker struct {
-	maxBackoff uint16
+	MaxBackoff int
+	Locker     uint32
 }
 
-type lightLocker uint32
-
-func (ll *lightLocker) Lock() {
+func (ll *LightLocker) Lock() {
 	backoff := 1
-	for !atomic.CompareAndSwapUint32((*uint32)(ll), 0, 1) {
+	for !atomic.CompareAndSwapUint32(&ll.Locker, 0, 1) {
 		for i := 0; i < backoff; i++ {
 			//让出cpu
 			runtime.Gosched()
 		}
-		if backoff < maxBackoff {
-			backoff = backoff - 1
+		if backoff < ll.MaxBackoff {
+			backoff += 1
 		}
 	}
 }
 
-func (ll *lightLocker) Unlock() {
-	atomic.StoreUint32((*uint32)(ll), 0)
+func (ll *LightLocker) Unlock() {
+	atomic.StoreUint32(&ll.Locker, 0)
 }
 
-func NewLightLock(locker LightLocker) sync.Locker {
-	return new(lightLocker)
+func NewLightLock(maxBackOff int) sync.Locker {
+	if maxBackOff < 1 {
+		maxBackOff = 1
+	}
+	return &LightLocker{
+		MaxBackoff: maxBackOff,
+		Locker:     0,
+	}
 }
