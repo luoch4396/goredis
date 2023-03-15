@@ -6,13 +6,17 @@ import (
 	"goredis/interface/tcp"
 	"goredis/pkg/utils"
 	"goredis/redis/request"
-	_interface "goredis/redis/strategies/interface"
 	"io"
 	"strconv"
 )
 
+// ParseStrategy 解析策略接口
+type ParseStrategy interface {
+	Do(reader *bufio.Reader, lineBytes []byte) *tcp.Request
+}
+
 type Operator struct {
-	ParseStrategy _interface.ParseStrategy
+	ParseStrategy ParseStrategy
 }
 
 func (operator *Operator) DoStrategy(reader *bufio.Reader, lineBytes []byte) *tcp.Request {

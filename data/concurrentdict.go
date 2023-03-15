@@ -2,7 +2,8 @@ package data
 
 import (
 	"goredis/data/interface"
-	"goredis/pkg/exception"
+	"goredis/pkg/error"
+	"goredis/pkg/log"
 	"goredis/pkg/utils/hasher"
 	"math"
 	"sync"
@@ -15,7 +16,7 @@ type ConcurrentDict struct {
 	shardCount int
 }
 
-//使用数据分片的方式和分段读写锁提高性能
+// 使用数据分片的方式和分段读写锁提高性能
 type dictShard struct {
 	table         map[string]interface{}
 	readWriteLock sync.RWMutex
@@ -54,13 +55,21 @@ func computeCapacity(param int) (size int) {
 }
 
 func (dict *ConcurrentDict) spread(hashCode uint32) uint32 {
-	exception.NewNullPointerException(dict, "dict")
+	_, err := error.CheckIsNotNull(dict)
+	if err != nil {
+		log.Errorf("dict ", err)
+		return 0
+	}
 	var tableSize = uint32(len(dict.dictShard))
 	return (tableSize - 1) & hashCode
 }
 
 func (dict *ConcurrentDict) getShard(index uint32) *dictShard {
-	exception.NewNullPointerException(dict, "dict")
+	_, err := error.CheckIsNotNull(dict)
+	if err != nil {
+		log.Errorf("dict ", err)
+		return nil
+	}
 	return dict.dictShard[index]
 }
 
@@ -69,7 +78,11 @@ func (dict *ConcurrentDict) addCount() int32 {
 }
 
 func (dict *ConcurrentDict) Put(key string, value interface{}) (result bool) {
-	exception.NewNullPointerException(dict, "dict")
+	_, err := error.CheckIsNotNull(dict)
+	if err != nil {
+		log.Errorf("", err)
+		return false
+	}
 	var hashCode = hasher.Sum32([]byte(key))
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
@@ -85,12 +98,15 @@ func (dict *ConcurrentDict) Put(key string, value interface{}) (result bool) {
 }
 
 func (dict *ConcurrentDict) Size() int {
-	exception.NewNullPointerException(dict, "dict")
 	return int(atomic.LoadInt32(&dict.count))
 }
 
 func (dict *ConcurrentDict) Get(key string) (value interface{}, exists bool) {
-	exception.NewNullPointerException(dict, "dict")
+	_, err := error.CheckIsNotNull(dict)
+	if err != nil {
+		log.Errorf("", err)
+		return nil, false
+	}
 	var hashCode = hasher.Sum32([]byte(key))
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
@@ -101,7 +117,11 @@ func (dict *ConcurrentDict) Get(key string) (value interface{}, exists bool) {
 }
 
 func (dict *ConcurrentDict) PutIfAbsent(key string, value interface{}) (result bool) {
-	exception.NewNullPointerException(dict, "dict")
+	_, err := error.CheckIsNotNull(dict)
+	if err != nil {
+		log.Errorf("", err)
+		return false
+	}
 	var hashCode = hasher.Sum32([]byte(key))
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
@@ -115,7 +135,11 @@ func (dict *ConcurrentDict) PutIfAbsent(key string, value interface{}) (result b
 	return false
 }
 func (dict *ConcurrentDict) PutIfPresent(key string, value interface{}) (result bool) {
-	exception.NewNullPointerException(dict, "dict")
+	_, err := error.CheckIsNotNull(dict)
+	if err != nil {
+		log.Errorf("", err)
+		return false
+	}
 	var hashCode = hasher.Sum32([]byte(key))
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
@@ -133,7 +157,11 @@ func (dict *ConcurrentDict) Remove(key string) (result bool) {
 }
 
 func (dict *ConcurrentDict) ForEach(consumer _interface.DictConsumer) {
-	exception.NewNullPointerException(dict, "dict")
+	_, err := error.CheckIsNotNull(dict)
+	if err != nil {
+		log.Errorf("", err)
+		return
+	}
 	for _, shard := range dict.dictShard {
 		shard.readWriteLock.RLock()
 		res := func() bool {

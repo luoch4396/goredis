@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"github.com/go-netty/go-netty"
 	"github.com/go-netty/go-netty/codec"
+	"github.com/panjf2000/ants/v2"
 	"goredis/interface/tcp"
+	"goredis/pkg/log"
 	"goredis/redis/strategies"
 	"io"
 	"runtime/debug"
@@ -25,9 +27,20 @@ func (*redisCodec) CodecName() string {
 }
 
 func (*redisCodec) HandleRead(ctx netty.InboundContext, message netty.Message) {
-	//go parse(ctx, message)
 	ch := make(chan *tcp.Request)
-	go parse(message, ch)
+	parse := func() {
+		parse(message, ch)
+	}
+	pool, err := ants.NewPool(5000)
+	if err != nil {
+		log.Errorf("run parse message with any error, func exit", err)
+		return
+	}
+	err = pool.Submit(parse)
+	if err != nil {
+		log.Errorf("run parse message with any error, func exit", err)
+		return
+	}
 	//ctx.Write(message)
 }
 
@@ -40,7 +53,7 @@ func (*redisCodec) HandleWrite(ctx netty.OutboundContext, message netty.Message)
 	}
 }
 
-//根据RESP解析为统一格式返回
+// 根据RESP解析为统一格式返回
 func parse(message netty.Message, ch chan<- *tcp.Request) {
 	defer func() {
 		if err := recover(); err != nil {
