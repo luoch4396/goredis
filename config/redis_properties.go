@@ -3,6 +3,7 @@ package config
 import (
 	"bufio"
 	"goredis/pkg/log"
+	"goredis/pkg/utils"
 	"io"
 	"os"
 	"reflect"
@@ -34,7 +35,7 @@ type GlobalServerProperties struct {
 
 func NewConfig(globalConfigFileName string) {
 	//配置文件不存在，获取默认配置
-	if !log.FileIsExist(globalConfigFileName) {
+	if !utils.FileIsExist(globalConfigFileName) {
 		GlobalProperties = defaultProperties
 		return
 	}

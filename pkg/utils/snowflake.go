@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"goredis/pkg/log"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -53,7 +53,7 @@ func (s *Snowflake) NextId() int64 {
 	}
 	t := now - epoch
 	if t > timestampMax {
-		log.Errorf("epoch must be between 0 and %d", timestampMax-1)
+		_ = fmt.Errorf("epoch must be between 0 and %d", timestampMax-1)
 		return 0
 	}
 	s.timestamp = now
