@@ -7,34 +7,29 @@ import (
 )
 
 type goWorker struct {
-	// pool who owns this worker.
+	//协程池
 	pool *Pool
-
-	// task is a job should be done.
+	//chan
 	task chan func()
-
-	// recycleTime will be updated when putting a worker back into queue.
+	//重新放回队列的时间
 	recycleTime time.Time
 }
 
 func (gw *goWorker) run() {
-	gw.pool.addRunning(1)
+	pool := gw.pool
+
+	pool.addRunning(1)
 	go func() {
 		defer func() {
-			gw.pool.addRunning(-1)
-			gw.pool.workerCache.Put(gw)
+			pool.addRunning(-1)
+			pool.workerCache.Put(gw)
 			if p := recover(); p != nil {
-				if ph := gw.pool.options.PanicHandler; ph != nil {
-					ph(p)
-				} else {
-					log.Errorf("worker exits from a panic: %v", p)
-					var buf [4096]byte
-					n := runtime.Stack(buf[:], false)
-					log.Errorf("worker exits from panic: %s", string(buf[:n]))
-				}
+				var buf [4096]byte
+				//创建栈
+				n := runtime.Stack(buf[:], false)
+				log.Infof("worker run with any error: %s", string(buf[:n]))
 			}
-			// Call Signal() here in case there are goroutines waiting for available workers.
-			gw.pool.cond.Signal()
+			pool.cond.Signal()
 		}()
 
 		for f := range gw.task {
@@ -42,7 +37,7 @@ func (gw *goWorker) run() {
 				return
 			}
 			f()
-			if ok := gw.pool.revertWorker(gw); !ok {
+			if ok := pool.revertWorker(gw); !ok {
 				return
 			}
 		}
