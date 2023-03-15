@@ -2,6 +2,7 @@ package redis
 
 import (
 	"github.com/go-netty/go-netty"
+	"github.com/go-netty/go-netty/transport/tcp"
 	"goredis/db"
 	"goredis/pkg/log"
 	"goredis/redis/handler"
@@ -38,4 +39,15 @@ func NewRedisServer(config *Config) {
 	}
 	//todo 后期增加cluster 模式，现在仅有单机模式
 	db.NewSingleServer()
+}
+
+func newTcpOp() *tcp.Options {
+	return &tcp.Options{
+		Timeout:         time.Second * 3,
+		KeepAlive:       true,
+		KeepAlivePeriod: time.Second * 5,
+		Linger:          0,
+		NoDelay:         true,
+		SockBuf:         1024,
+	}
 }
