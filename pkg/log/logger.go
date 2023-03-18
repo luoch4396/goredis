@@ -129,7 +129,7 @@ func (dl *Logger) basePrintLog(logLevel Level, message *string, v ...interface{}
 	builder := &strings.Builder{}
 	_, err := builder.WriteString(levels[logLevel])
 	if err != nil {
-		panic(err)
+		log.Println("[ERROR] log print produce any error: ", err)
 		return
 	}
 	if message != nil {
@@ -139,6 +139,7 @@ func (dl *Logger) basePrintLog(logLevel Level, message *string, v ...interface{}
 	}
 	err = dl.stdLog.Output(4, builder.String())
 	if err != nil {
+		log.Println("[ERROR] log print produce any error: ", err)
 		return
 	}
 	if logLevel == FATAL {
