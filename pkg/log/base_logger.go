@@ -28,7 +28,6 @@ type Logger struct {
 	stdLog *log.Logger //日志
 	level  Level       //日志级别
 	w      io.Writer   //日志输出
-	wm     io.Writer   //文件输出
 }
 
 type FileSettings struct {
@@ -39,7 +38,7 @@ type FileSettings struct {
 type Builder interface {
 	Build() *Logger
 	BuildLevel(lv string) *LoggerBuilder
-	BuildOutput(w io.Writer) *LoggerBuilder
+	BuildStdOut(w io.Writer) *LoggerBuilder
 	BuildFile(settings *FileSettings) *LoggerBuilder
 }
 

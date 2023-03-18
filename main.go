@@ -1,11 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"goredis/config"
 	"goredis/pkg/log"
 	"goredis/pkg/utils"
 	"goredis/redis"
+	"os"
 	"strconv"
 )
 
@@ -21,22 +21,22 @@ func main() {
 	//打印banner
 	print(banner)
 	//创建配置文件解析器
-	config.NewConfig("redis.properties")
-	//创建日志建造者
-	buf := new(bytes.Buffer)
+	config.NewConfig("redis.yaml")
+	configs := config.Configs
+	//日志
 	fs := &log.FileSettings{
-		Path:     config.GlobalProperties.LogFilePath,
-		FileName: config.GlobalProperties.LogFileName,
+		Path:     configs.Log.FilePath,
+		FileName: configs.Log.FileName,
 	}
 	//初始化日志模块
 	log.NewLoggerBuilder().
-		BuildOutput(buf).
-		BuildLevel(config.GlobalProperties.LogLevel).
+		BuildStdOut(os.Stdout).
+		BuildLevel(configs.Log.LogLevel).
 		BuildFile(fs).
 		Build()
 	//开启tcp服务
 	redis.NewRedisServer(&redis.Config{
-		Address: utils.NewStringBuilder(config.GlobalProperties.Address,
-			":", strconv.FormatInt(int64(config.GlobalProperties.Port), 10)),
+		Address: utils.NewStringBuilder(configs.Server.Address,
+			":", strconv.FormatInt(int64(configs.Server.Port), 10)),
 	})
 }

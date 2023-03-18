@@ -17,38 +17,30 @@ type Config struct {
 
 // NewRedisServer 实现一个netty redis
 func NewRedisServer(config *Config) {
-	// setup child pipeline initializer.
+	//todo 后期增加cluster 模式，现在仅有单机模式
+	db.NewSingleServer()
 	var childInitializer = func(channel netty.Channel) {
 		channel.Pipeline().
 			AddLast(handler.EchoHandler{}).
 			AddLast(handler.RedisCodec())
-
 	}
-	// new bootstrap
+	//TODO 需要控制TCP连接数
 	var bootstrap = netty.NewBootstrap(netty.WithChildInitializer(childInitializer))
-	// setup bootstrap & startup redis.
 	log.Info("start goredis server success: " + config.Address + ", start listening...")
-	var listener = bootstrap.Listen(config.Address)
-	var err = listener.Sync()
+	err := bootstrap.Listen(config.Address, tcp.WithOptions(newTcpOp())).Sync()
 	if err != nil {
-		var err = listener.Close()
-		if err != nil {
-			log.Errorf("", err)
-			return
-		}
+		return
 	}
-	//todo 后期增加cluster 模式，现在仅有单机模式
-	db.NewSingleServer()
 }
 
-//TCP配置初始化
+//TCP配置初始化 TODO 改为配置化
 func newTcpOp() *tcp.Options {
 	return &tcp.Options{
-		Timeout:         time.Second * 3,
+		Timeout:         time.Second * 5,
 		KeepAlive:       true,
-		KeepAlivePeriod: time.Second * 5,
+		KeepAlivePeriod: time.Second * 60,
 		Linger:          0,
 		NoDelay:         true,
-		SockBuf:         1024,
+		SockBuf:         2048,
 	}
 }

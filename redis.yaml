@@ -1,0 +1,11 @@
+#tcp server config
+server:
+  address: 127.0.0.1
+  port: 6379
+  max-conn: 80000
+
+# log configs
+log:
+  file-name: goredis
+  file-path: logs
+  log-level: INFO

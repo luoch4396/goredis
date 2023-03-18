@@ -1,8 +1,8 @@
 package db
 
 import (
-	"fmt"
 	"goredis/config"
+	"goredis/pkg/log"
 	"sync/atomic"
 )
 
@@ -21,9 +21,10 @@ type SingleServer struct {
 // NewSingleServer 创建一个简单的单机redis服务
 func NewSingleServer() *SingleServer {
 	var singleServer = &SingleServer{}
-	if config.GlobalProperties.Databases == 0 {
+	configs := &config.Configs
+	if configs.Server.Databases == 0 {
 		//redis 默认16个数据库
-		config.GlobalProperties.Databases = 16
+		configs.Server.Databases = 16
 	}
 	for i := range singleServer.dbs {
 		var singleDB = newDB()
@@ -32,6 +33,6 @@ func NewSingleServer() *SingleServer {
 		oneDb.Store(singleDB)
 		singleServer.dbs[i] = oneDb
 	}
-	fmt.Print("create default 16 databases redis success!")
+	log.Info("create default 16 databases success!")
 	return singleServer
 }

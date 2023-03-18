@@ -31,7 +31,8 @@ func (*redisCodec) HandleRead(ctx netty.InboundContext, message netty.Message) {
 	parse := func() {
 		parse(message, ch)
 	}
-	pool, err := ants.NewPool(5000)
+	//TODO 配置化协程池大小
+	pool, err := ants.NewPool(1)
 	if err != nil {
 		log.Errorf("run parse message with any error, func exit", err)
 		return

@@ -1,7 +1,7 @@
 package log
 
 import (
-	"bytes"
+	"os"
 	"testing"
 )
 
@@ -23,13 +23,12 @@ func formatOutput(t *testing.T, testLevel Level, format string, args ...interfac
 }
 
 func TestOutput(t *testing.T) {
-	buf := new(bytes.Buffer)
 	var fs = &FileSettings{
 		Path:     "logs",
 		FileName: "2022",
 	}
 	NewLoggerBuilder().
-		BuildOutput(buf).
+		BuildStdOut(os.Stdout).
 		BuildLevel("INFO").
 		BuildFile(fs).
 		Build()

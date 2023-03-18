@@ -22,19 +22,12 @@ func NewLoggerBuilder() Builder {
 
 // Build 初始化日志参数
 func (builder *LoggerBuilder) Build() *Logger {
-	wm := builder.logger.wm
-	w := builder.logger.w
-	if wm != nil {
-		builder.logger.stdLog = log.New(wm, "", log.LstdFlags|log.Lshortfile|log.Lmicroseconds)
-	} else {
-		builder.logger.stdLog = log.New(logger.w, "", log.LstdFlags|log.Lshortfile|log.Lmicroseconds)
-	}
-	builder.logger.stdLog.SetOutput(w)
+	builder.logger.stdLog = log.New(logger.w, "", log.LstdFlags|log.Lshortfile|log.Lmicroseconds)
 	logger = builder.logger
 	return &logger
 }
 
-func (builder *LoggerBuilder) BuildOutput(w io.Writer) *LoggerBuilder {
+func (builder *LoggerBuilder) BuildStdOut(w io.Writer) *LoggerBuilder {
 	builder.logger.w = w
 	return builder
 }
@@ -62,9 +55,10 @@ func (builder *LoggerBuilder) BuildFile(settings *FileSettings) *LoggerBuilder {
 		"logs")
 	logFile, err := utils.CreateIfNotExist(fileName, settings.Path)
 	if err != nil {
-		_ = fmt.Errorf("logger.WithFile error: %s", err)
+		err = fmt.Errorf("logger.WithFile error: %s", err)
+		panic(err)
 	}
-	builder.logger.wm = io.MultiWriter(logger.w, logFile)
+	logger.w = io.MultiWriter(logger.w, logFile)
 	return builder
 }
 
@@ -145,7 +139,6 @@ func (dl *Logger) basePrintLog(logLevel Level, message *string, v ...interface{}
 	}
 	err = dl.stdLog.Output(4, builder.String())
 	if err != nil {
-		panic(err)
 		return
 	}
 	if logLevel == FATAL {

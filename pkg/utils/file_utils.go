@@ -6,7 +6,7 @@ import (
 )
 
 func isNotExistMkDir(src string) error {
-	if FileIsExist(src) {
+	if DirIsExist(src) {
 		return mkDir(src)
 	}
 	return nil
@@ -39,8 +39,8 @@ func CheckPermission(src string) bool {
 	return os.IsPermission(err)
 }
 
-// FileIsExist 判断文件是否存在
-func FileIsExist(filename string) bool {
-	_, err := os.Stat(filename)
+// DirIsExist 判断文件是否存在
+func DirIsExist(dir string) bool {
+	_, err := os.Stat(dir)
 	return os.IsNotExist(err)
 }
