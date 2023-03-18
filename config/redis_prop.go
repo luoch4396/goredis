@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
@@ -32,7 +31,6 @@ func NewConfig(globalConfigFileName string) {
 	}
 	file, err := ioutil.ReadFile(globalConfigFileName)
 	if err != nil {
-		_ = fmt.Errorf("read redis config file failed")
 		panic(err)
 	}
 	err = yaml.Unmarshal(file, &Configs)
