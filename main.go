@@ -20,6 +20,8 @@ var banner = `
 func main() {
 	//打印banner
 	print(banner)
+	//创建配置文件解析器
+	config.NewConfig("redis.properties")
 	//创建日志建造者
 	buf := new(bytes.Buffer)
 	fs := &log.FileSettings{
@@ -32,8 +34,6 @@ func main() {
 		BuildLevel(config.GlobalProperties.LogLevel).
 		BuildFile(fs).
 		Build()
-	//创建配置文件解析器
-	config.NewConfig("redis.properties")
 	//开启tcp服务
 	redis.NewRedisServer(&redis.Config{
 		Address: utils.NewStringBuilder(config.GlobalProperties.Address,

@@ -29,8 +29,8 @@ type GlobalServerProperties struct {
 	Databases   int    `config:"databases"`
 	CopyTimeout int    `config:"copy-timeout"`
 	LogLevel    string `config:"log-level"`
-	LogFilePath string `config:"Log-file-path"`
-	LogFileName string `config:"Log-file-name"`
+	LogFilePath string `config:"log-file-path"`
+	LogFileName string `config:"log-file-name"`
 }
 
 func NewConfig(globalConfigFileName string) {

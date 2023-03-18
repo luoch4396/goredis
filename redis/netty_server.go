@@ -41,6 +41,7 @@ func NewRedisServer(config *Config) {
 	db.NewSingleServer()
 }
 
+//TCP配置初始化
 func newTcpOp() *tcp.Options {
 	return &tcp.Options{
 		Timeout:         time.Second * 3,
