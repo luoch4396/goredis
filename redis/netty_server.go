@@ -22,6 +22,7 @@ func NewRedisServer(config *Config) {
 	var childInitializer = func(channel netty.Channel) {
 		channel.Pipeline().
 			AddLast(handler.EchoHandler{}).
+			AddLast(handler.ExceptionHandler{}).
 			AddLast(handler.RedisCodec())
 	}
 	//TODO 需要控制TCP连接数
@@ -33,7 +34,7 @@ func NewRedisServer(config *Config) {
 	}
 }
 
-//TCP配置初始化 TODO 改为配置化
+// TCP配置初始化 TODO 改为配置化
 func newTcpOp() *tcp.Options {
 	return &tcp.Options{
 		Timeout:         time.Second * 5,

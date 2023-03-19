@@ -1,23 +1,30 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/go-netty/go-netty"
+	"sync/atomic"
 )
 
 type EchoHandler struct {
-	role string
+	//role string
 }
 
-// HandleActive 开启处理器
+var (
+	maxChan uint32 = 0
+)
+
+// HandleActive 开启连接
 func (l EchoHandler) HandleActive(ctx netty.ActiveContext) {
-	var channel = ctx.Channel()
-	if !channel.IsActive() {
-		return
-	}
+	//TODO 控制连接上限，以及连接池管理？
+	atomic.AddUint32(&maxChan, 1)
+	//var channel = ctx.Channel()
+	//if !channel.IsActive() {
+	//	return
+	//}
 }
 
-// HandleInactive 关闭处理器
+// HandleInactive 关闭连接
 func (l EchoHandler) HandleInactive(ctx netty.InactiveContext, ex netty.Exception) {
-	fmt.Println(l.role, "->", "inactive:", ctx.Channel().RemoteAddr(), ex)
+	//fmt.Println(l.role, "->", "inactive:", ctx.Channel().RemoteAddr(), ex)
+	ctx.Channel().Close(ex)
 }

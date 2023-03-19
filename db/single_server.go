@@ -6,11 +6,6 @@ import (
 	"sync/atomic"
 )
 
-var (
-	//暂不支持的命令行操作
-	unknownOperation = []byte("-ERR unknown\r\n")
-)
-
 type SingleServer struct {
 	//db数组
 	dbs []*atomic.Value

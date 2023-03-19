@@ -11,7 +11,7 @@ func (e *NilPointerError) Error() string {
 func CheckIsNotNull(object interface{}) (bool, error) {
 	if object == nil {
 		return false, &NilPointerError{
-			message: "must be not null!",
+			message: "nil error: must be not null!",
 		}
 	}
 	return true, nil

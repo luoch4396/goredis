@@ -11,6 +11,7 @@ type LightLocker struct {
 	Locker     uint32
 }
 
+// Lock 自旋
 func (ll *LightLocker) Lock() {
 	backoff := 1
 	for !atomic.CompareAndSwapUint32(&ll.Locker, 0, 1) {
@@ -28,6 +29,7 @@ func (ll *LightLocker) Unlock() {
 	atomic.StoreUint32(&ll.Locker, 0)
 }
 
+// TryLock 使用cas实现一个轻量级锁
 func (ll *LightLocker) TryLock() bool {
 	return atomic.CompareAndSwapUint32(&ll.Locker, 0, 1)
 }

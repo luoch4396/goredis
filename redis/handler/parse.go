@@ -62,16 +62,30 @@ func parse(message netty.Message, ch chan<- *tcp.Request) {
 		//多行字符串（Bulk Strings）： 响应的首字节是"\$"
 		case '$':
 			//println("解析前:", string(lineBytes))
-			var operator = strategies.Operator{
+			operator := strategies.Operator{
 				ParseStrategy: &strategies.BulkStringsStrategy{},
 			}
-			var operatorRequest = operator.DoStrategy(reader, lineBytes)
-			//println("解析后:", string(operatorResponse.Data.RequestInfo()))
-			ch <- operatorRequest
+			operatorRequest := operator.DoStrategy(reader, lineBytes)
+			if operatorRequest != nil {
+				//log.Debug("解析后: " + string(operatorRequest.Data.RequestInfo()))
+				ch <- operatorRequest
+				if operatorRequest.Error != nil {
+					close(ch)
+					return
+				}
+			}
 		case '*':
-			//err = parseArray(lineBytes, reader)
-			if err != nil {
-				//return requests, err
+			operator := strategies.Operator{
+				ParseStrategy: &strategies.ArrayStrategy{},
+			}
+			operatorRequest := operator.DoStrategy(reader, lineBytes)
+			if operatorRequest != nil {
+				//log.Debug("解析后: " + string(operatorRequest.Data.RequestInfo()))
+				ch <- operatorRequest
+				if operatorRequest.Error != nil {
+					close(ch)
+					return
+				}
 			}
 		//整型（Integers）： 响应的首字节是 ":"
 		case ':':
