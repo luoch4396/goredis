@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-// ParseStrategy 解析策略接口
+// ParseStrategy 行解析策略接口
 type ParseStrategy interface {
 	Do(reader *bufio.Reader, lineBytes []byte) *tcp.Request
 }
@@ -90,5 +90,11 @@ func (*ArrayStrategy) Do(reader *bufio.Reader, lineBytes []byte) *tcp.Request {
 	//ch <- &Payload{
 	//	Data: protocol.MakeMultiBulkReply(lines),
 	//}
+	return nil
+}
+
+type StatusStrategy struct{}
+
+func (*StatusStrategy) Do(reader *bufio.Reader, lineBytes []byte) *tcp.Request {
 	return nil
 }

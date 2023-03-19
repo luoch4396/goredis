@@ -51,6 +51,7 @@ func parse(message netty.Message, ch chan<- *tcp.Request) {
 		case '+':
 			var content = string(lineBytes[1:])
 			println("收到数据1", content)
+			//TODO rdb操作
 		//错误（Errors）： 响应的首字节是 "-"
 		case '-':
 			value, err := strconv.ParseInt(string(lineBytes[1:]), 10, 64)

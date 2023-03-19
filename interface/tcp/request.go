@@ -14,3 +14,8 @@ type Request struct {
 type Requests struct {
 	Datas []Request
 }
+
+type ErrorRequestInfo interface {
+	Error() string
+	RequestInfo() []byte
+}
