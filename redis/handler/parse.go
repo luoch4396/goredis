@@ -5,58 +5,18 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/go-netty/go-netty"
-	"github.com/go-netty/go-netty/codec"
-	"github.com/panjf2000/ants/v2"
 	"goredis/interface/tcp"
 	"goredis/pkg/log"
 	"goredis/redis/strategies"
 	"io"
 	"runtime/debug"
 	"strconv"
-	"strings"
 )
-
-func RedisCodec() codec.Codec {
-	return &redisCodec{}
-}
-
-type redisCodec struct{}
-
-func (*redisCodec) CodecName() string {
-	return "redis-handler"
-}
-
-func (*redisCodec) HandleRead(ctx netty.InboundContext, message netty.Message) {
-	ch := make(chan *tcp.Request)
-	parse := func() {
-		parse(message, ch)
-	}
-	//TODO 配置化协程池大小
-	pool, err := ants.NewPool(1)
-	if err != nil {
-		log.Errorf("run parse message with any error, func exit", err)
-		return
-	}
-	err = pool.Submit(parse)
-	if err != nil {
-		log.Errorf("run parse message with any error, func exit", err)
-		return
-	}
-	//ctx.Write(message)
-}
-
-func (*redisCodec) HandleWrite(ctx netty.OutboundContext, message netty.Message) {
-	switch s := message.(type) {
-	case string:
-		ctx.HandleWrite(strings.NewReader(s))
-	default:
-		ctx.HandleWrite(message)
-	}
-}
 
 // 根据RESP解析为统一格式返回
 func parse(message netty.Message, ch chan<- *tcp.Request) {
 	defer func() {
+		//错误恢复
 		if err := recover(); err != nil {
 			err = fmt.Errorf(string(debug.Stack()), err)
 		}
@@ -117,7 +77,7 @@ func parse(message netty.Message, ch chan<- *tcp.Request) {
 		case ':':
 			value, err := strconv.ParseInt(string(lineBytes[1:]), 10, 64)
 			if err != nil {
-				_ = fmt.Errorf(string(debug.Stack()), err)
+				log.Errorf("", err)
 				continue
 			}
 			println(value)

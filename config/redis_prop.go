@@ -19,6 +19,11 @@ type Config struct {
 		MaxConn   int    `yaml:"max-conn"`
 		Databases int    `yaml:"databases"`
 	}
+	Pools []Pool `yaml:"pools"`
+}
+
+type Pool struct {
+	size int `yaml:"size"`
 }
 
 var Configs Config
@@ -34,4 +39,7 @@ func NewConfig(globalConfigFileName string) {
 		panic(err)
 	}
 	err = yaml.Unmarshal(file, &Configs)
+	if err != nil {
+		panic(err)
+	}
 }

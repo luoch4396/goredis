@@ -34,6 +34,11 @@ func main() {
 		BuildLevel(configs.Log.LogLevel).
 		BuildFile(fs).
 		Build()
+	// 预初始化协程池
+	//_, err := pool.GetInstance(1000)
+	//if err != nil {
+	//	return
+	//}
 	//开启tcp服务
 	redis.NewRedisServer(&redis.Config{
 		Address: utils.NewStringBuilder(configs.Server.Address,

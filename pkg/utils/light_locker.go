@@ -28,6 +28,10 @@ func (ll *LightLocker) Unlock() {
 	atomic.StoreUint32(&ll.Locker, 0)
 }
 
+func (ll *LightLocker) TryLock() bool {
+	return atomic.CompareAndSwapUint32(&ll.Locker, 0, 1)
+}
+
 func NewLightLock(maxBackOff int) sync.Locker {
 	if maxBackOff < 1 {
 		maxBackOff = 1
