@@ -7,6 +7,7 @@ import (
 	"github.com/go-netty/go-netty"
 	"goredis/interface/tcp"
 	"goredis/pkg/log"
+	"goredis/redis/request"
 	"goredis/redis/strategies"
 	"io"
 	"runtime/debug"
@@ -95,7 +96,9 @@ func parse(message netty.Message, ch chan<- *tcp.Request) {
 				log.Errorf("", err)
 				continue
 			}
-			println(value)
+			ch <- &tcp.Request{
+				Data: request.NewIntRequest(value),
+			}
 			//
 		default:
 			var args = bytes.Split(lineBytes, []byte{' '})

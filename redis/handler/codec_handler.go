@@ -6,7 +6,7 @@ import (
 	"goredis/interface/tcp"
 	"goredis/pkg/log"
 	"goredis/pool"
-	"goredis/redis/strategies"
+	"goredis/redis/request"
 	"io"
 	"strings"
 )
@@ -22,7 +22,7 @@ func (*codecHandler) CodecName() string {
 }
 
 var (
-	//暂不支持的命令行操作
+	//暂不支持的命令/未知命令
 	unknownOperation = []byte("-ERR unknown\r\n")
 )
 
@@ -49,30 +49,30 @@ func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message)
 			if req.Error == io.EOF ||
 				req.Error == io.ErrUnexpectedEOF ||
 				strings.Contains(req.Error.Error(), "use a closed network channel") {
-				log.Info("handle message with error, client channel will be closed: " + ctx.Channel().RemoteAddr())
+				log.Info("handle message with error, channel will be closed: " + ctx.Channel().RemoteAddr())
 				ctx.Channel().Close(req.Error)
 				return
 			}
-			errReply := strategies.MakeErrReply(req.Error.Error())
-			ctx.Write(errReply.ToBytes())
+			errReply := request.NewStatusRequest(req.Error.Error())
+			ctx.Write(errReply.RequestInfo())
 			continue
 		}
 		if req.Data == nil {
 			log.Error("empty payload")
 			continue
 		}
-		r, ok := req.Data.(*strategies.MultiBulkReply)
+		r, ok := req.Data.(*request.MultiBulkRequest)
 		if !ok {
 			log.Error("require multi bulk request")
 			continue
 		}
 		//命令处理
-		result := h.db.Exec(message, r.Args)
-		if result != nil {
-			ctx.Write(result.ToBytes())
-		} else {
-			ctx.Write(unknownOperation)
-		}
+		//result := h.db.Exec(message, r.Args)
+		//if result != nil {
+		//	ctx.Write(result.ToBytes())
+		//} else {
+		//	ctx.Write(unknownOperation)
+		//}
 	}
 }
 
