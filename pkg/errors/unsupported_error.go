@@ -1,4 +1,4 @@
-package error
+package errors
 
 import "goredis/pkg/utils"
 
@@ -7,5 +7,5 @@ type UnsupportedError struct {
 }
 
 func (e *UnsupportedError) Error() string {
-	return utils.NewStringBuilder("unsupported operation error: ", e.message)
+	return utils.NewStringBuilder("unsupported operation errors: ", e.message)
 }

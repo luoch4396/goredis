@@ -31,7 +31,7 @@ func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message)
 	//TODO 配置化协程池大小
 	pools, err := pool.GetInstance(0)
 	if err != nil {
-		log.Errorf("run parse message with any error, func exit: ", err)
+		log.Errorf("run parse message with any errors, func exit: ", err)
 		ctx.Channel().Close(err)
 		return
 	}
@@ -39,7 +39,7 @@ func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message)
 		parse(message, ch)
 	})
 	if err != nil {
-		log.Errorf("run parse message with any error, func exit: ", err)
+		log.Errorf("run parse message with any errors, func exit: ", err)
 		ctx.Channel().Close(err)
 		return
 	}
@@ -49,7 +49,7 @@ func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message)
 			if req.Error == io.EOF ||
 				req.Error == io.ErrUnexpectedEOF ||
 				strings.Contains(req.Error.Error(), "use a closed network channel") {
-				log.Info("handle message with error, channel will be closed: " + ctx.Channel().RemoteAddr())
+				log.Info("handle message with errors, channel will be closed: " + ctx.Channel().RemoteAddr())
 				ctx.Channel().Close(req.Error)
 				return
 			}

@@ -2,7 +2,7 @@ package data
 
 import (
 	_interface "goredis/data/interface"
-	"goredis/pkg/error"
+	"goredis/pkg/errors"
 	"goredis/pkg/log"
 	"goredis/pkg/utils"
 	"goredis/pkg/utils/hasher"
@@ -42,7 +42,7 @@ func NewSpinDict(shardCount int) *SpinDict {
 }
 
 func (dict *SpinDict) spread(hashCode uint32) uint32 {
-	_, err := error.CheckIsNotNull(dict)
+	_, err := errors.CheckIsNotNull(dict)
 	if err != nil {
 		log.Errorf("dict ", err)
 		return 0
@@ -52,7 +52,7 @@ func (dict *SpinDict) spread(hashCode uint32) uint32 {
 }
 
 func (dict *SpinDict) getShard(index uint32) *spinDictShard {
-	_, err := error.CheckIsNotNull(dict)
+	_, err := errors.CheckIsNotNull(dict)
 	if err != nil {
 		log.Errorf("dict ", err)
 		return nil
@@ -65,7 +65,7 @@ func (dict *SpinDict) addCount() int32 {
 }
 
 func (dict *SpinDict) Put(key string, value interface{}) (result bool) {
-	_, err := error.CheckIsNotNull(dict)
+	_, err := errors.CheckIsNotNull(dict)
 	if err != nil {
 		log.Errorf("", err)
 		return false
@@ -89,7 +89,7 @@ func (dict *SpinDict) Size() int {
 }
 
 func (dict *SpinDict) Get(key string) (value interface{}, exists bool) {
-	_, err := error.CheckIsNotNull(dict)
+	_, err := errors.CheckIsNotNull(dict)
 	if err != nil {
 		log.Errorf("", err)
 		return nil, false
@@ -104,7 +104,7 @@ func (dict *SpinDict) Get(key string) (value interface{}, exists bool) {
 }
 
 func (dict *SpinDict) PutIfAbsent(key string, value interface{}) (result bool) {
-	_, err := error.CheckIsNotNull(dict)
+	_, err := errors.CheckIsNotNull(dict)
 	if err != nil {
 		log.Errorf("", err)
 		return false
@@ -122,7 +122,7 @@ func (dict *SpinDict) PutIfAbsent(key string, value interface{}) (result bool) {
 	return false
 }
 func (dict *SpinDict) PutIfPresent(key string, value interface{}) (result bool) {
-	_, err := error.CheckIsNotNull(dict)
+	_, err := errors.CheckIsNotNull(dict)
 	if err != nil {
 		log.Errorf("", err)
 		return false
@@ -144,7 +144,7 @@ func (dict *SpinDict) Remove(key string) (result bool) {
 }
 
 func (dict *SpinDict) ForEach(consumer _interface.DictConsumer) {
-	_, err := error.CheckIsNotNull(dict)
+	_, err := errors.CheckIsNotNull(dict)
 	if err != nil {
 		log.Errorf("", err)
 		return

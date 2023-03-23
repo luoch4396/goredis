@@ -2,9 +2,8 @@ package strategies
 
 import (
 	"bufio"
-	"errors"
 	"goredis/interface/tcp"
-	"goredis/pkg/error"
+	"goredis/pkg/errors"
 	"goredis/pkg/utils"
 	"goredis/redis/request"
 	"io"
@@ -13,53 +12,53 @@ import (
 
 // ParseStrategy 行解析策略接口
 type ParseStrategy interface {
-	Do(reader *bufio.Reader, lineBytes []byte) *tcp.Request
+	Do(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error
 }
 
 type Operator struct {
 	ParseStrategy ParseStrategy
 }
 
-func (operator *Operator) DoStrategy(reader *bufio.Reader, lineBytes []byte) *tcp.Request {
-	return operator.ParseStrategy.Do(reader, lineBytes)
+func (operator *Operator) DoStrategy(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error {
+	return operator.ParseStrategy.Do(reader, lineBytes, ch)
 }
 
 // BulkStringsStrategy 解析多行字符串
 type BulkStringsStrategy struct{}
 
-func (*BulkStringsStrategy) Do(reader *bufio.Reader, lineBytes []byte) *tcp.Request {
+func (*BulkStringsStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error {
 	strLen, err := strconv.ParseInt(string(lineBytes[1:]), 10, 64)
-	var redisRequest = &tcp.Request{}
 	if err != nil || strLen < -1 {
-		err := errors.New(utils.NewStringBuilder("parse error: illegal bulk string lineBytes: ", string(lineBytes)))
-		redisRequest.Error = err
-		return redisRequest
-	} else if strLen == -1 {
+		handleParseError(utils.NewStringBuilder("illegal bulk strings lineBytes ", string(lineBytes[1:])), ch)
 		return nil
+	} else if strLen == -1 {
+		ch <- &tcp.Request{
+			Data: request.NewEmptyMultiBulkRequest(),
+		}
 	}
 	body := make([]byte, strLen+2)
 	_, err = io.ReadFull(reader, body)
 	if err != nil {
-		redisRequest.Error = err
-		return redisRequest
+		return err
 	}
-	redisRequest.Data = request.NewBulkRequest(body[:len(body)-2])
-	return redisRequest
+	ch <- &tcp.Request{
+		Data: request.NewBulkRequest(body[:len(body)-2]),
+	}
+	return nil
 }
 
 // ArrayStrategy 解析数组
 type ArrayStrategy struct{}
 
-func (*ArrayStrategy) Do(reader *bufio.Reader, lineBytes []byte) *tcp.Request {
-	var redisRequest = &tcp.Request{}
+func (*ArrayStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error {
 	nStrs, err := strconv.ParseInt(string(lineBytes[1:]), 10, 64)
 	if err != nil || nStrs < 0 {
-		err = error.NewParseError(&error.ParseError{
-			Msg: "illegal bulk string lineBytes " + string(lineBytes[1:]),
-		})
+		handleParseError(utils.NewStringBuilder("illegal bulk strings lineBytes ", string(lineBytes[1:])), ch)
 		return nil
 	} else if nStrs == 0 {
-		redisRequest.Data = request.NewEmptyMultiBulkRequest()
+		ch <- &tcp.Request{
+			Data: request.NewEmptyMultiBulkRequest(),
+		}
 		return nil
 	}
 	lines := make([][]byte, 0, nStrs)
@@ -67,23 +66,16 @@ func (*ArrayStrategy) Do(reader *bufio.Reader, lineBytes []byte) *tcp.Request {
 		var line []byte
 		line, err = reader.ReadBytes('\n')
 		if err != nil {
-			redisRequest.Error = err
-			return redisRequest
+			return err
 		}
 		length := len(line)
 		if length < 4 || line[length-2] != '\r' || line[0] != '$' {
-			err = error.NewParseError(&error.ParseError{
-				Msg: "illegal bulk string lineBytes " + string(line),
-			})
-			//TODO:入队
+			handleParseError(utils.NewStringBuilder("illegal bulk strings lineBytes ", string(line)), ch)
 			break
 		}
 		strLen, err := strconv.ParseInt(string(line[1:length-2]), 10, 64)
 		if err != nil || strLen < -1 {
-			err = error.NewParseError(&error.ParseError{
-				Msg: "illegal bulk string lineBytes " + string(line),
-			})
-			//TODO:入队
+			handleParseError(utils.NewStringBuilder("illegal bulk strings length ", string(line)), ch)
 			break
 		} else if strLen == -1 {
 			lines = append(lines, []byte{})
@@ -91,13 +83,29 @@ func (*ArrayStrategy) Do(reader *bufio.Reader, lineBytes []byte) *tcp.Request {
 			body := make([]byte, strLen+2)
 			_, err := io.ReadFull(reader, body)
 			if err != nil {
-				redisRequest.Error = err
-				return redisRequest
+				return err
 			}
 			lines = append(lines, body[:len(body)-2])
 		}
 	}
-	//返回多行
-	redisRequest.Data = request.NewMultiBulkRequest(lines)
+	//解析为多行请求
+	ch <- &tcp.Request{
+		Data: request.NewMultiBulkRequest(lines),
+	}
 	return nil
+}
+
+// RDBBulkStringsStrategy 解析rdb多行请求
+type RDBBulkStringsStrategy struct{}
+
+func (*RDBBulkStringsStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error {
+	return nil
+}
+
+// 封装解析异常处理，并返回
+func handleParseError(msg string, ch chan<- *tcp.Request) {
+	err := errors.NewParseError(msg)
+	ch <- &tcp.Request{
+		Error: err,
+	}
 }

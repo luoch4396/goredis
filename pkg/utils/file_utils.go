@@ -23,7 +23,7 @@ func CreateIfNotExist(fileName, dir string) (*os.File, error) {
 	}
 
 	if err := isNotExistMkDir(dir); err != nil {
-		return nil, fmt.Errorf("error during make dir %s, err: %s", dir, err)
+		return nil, fmt.Errorf("errors during make dir %s, err: %s", dir, err)
 	}
 
 	f, err := os.OpenFile(dir+string(os.PathSeparator)+fileName, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)

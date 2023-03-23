@@ -55,7 +55,7 @@ func (builder *LoggerBuilder) BuildFile(settings *FileSettings) *LoggerBuilder {
 		"logs")
 	logFile, err := utils.CreateIfNotExist(fileName, settings.Path)
 	if err != nil {
-		err = fmt.Errorf("logger.WithFile error: %s", err)
+		err = fmt.Errorf("logger.WithFile errors: %s", err)
 		panic(err)
 	}
 	logger.w = io.MultiWriter(logger.w, logFile)
@@ -129,7 +129,7 @@ func (dl *Logger) basePrintLog(logLevel Level, message *string, v ...interface{}
 	builder := &strings.Builder{}
 	_, err := builder.WriteString(levels[logLevel])
 	if err != nil {
-		log.Println("[ERROR] log print produce any error: ", err)
+		log.Println("[ERROR] log print produce any errors: ", err)
 		return
 	}
 	if message != nil {
@@ -139,7 +139,7 @@ func (dl *Logger) basePrintLog(logLevel Level, message *string, v ...interface{}
 	}
 	err = dl.stdLog.Output(4, builder.String())
 	if err != nil {
-		log.Println("[ERROR] log print produce any error: ", err)
+		log.Println("[ERROR] log print produce any errors: ", err)
 		return
 	}
 	if logLevel == FATAL {

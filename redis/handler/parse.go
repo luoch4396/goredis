@@ -24,7 +24,7 @@ func parse(message netty.Message, ch chan<- *tcp.Request) {
 	}()
 	t, ok := message.(io.Reader)
 	if !ok {
-		var err = fmt.Errorf("message codec produce any error")
+		var err = fmt.Errorf("message codec produce any errors")
 		ch <- &tcp.Request{
 			Error: err,
 		}
@@ -52,42 +52,33 @@ func parse(message netty.Message, ch chan<- *tcp.Request) {
 		case '+':
 			var content = string(lineBytes[1:])
 			println("收到数据1", content)
+			ch <- &tcp.Request{
+				Data: request.NewStatusRequest(content),
+			}
 			//TODO rdb操作
 		//错误（Errors）： 响应的首字节是 "-"
 		case '-':
-			value, err := strconv.ParseInt(string(lineBytes[1:]), 10, 64)
-			println("收到数据2", value)
-			if err != nil {
-				_ = fmt.Errorf(string(debug.Stack()), err)
-				continue
+			ch <- &tcp.Request{
+				Data: request.NewStandardErrorRequest(string(lineBytes[1:])),
 			}
 		//多行字符串（Bulk Strings）： 响应的首字节是"\$"
 		case '$':
-			//println("解析前:", string(lineBytes))
 			operator := strategies.Operator{
 				ParseStrategy: &strategies.BulkStringsStrategy{},
 			}
-			operatorRequest := operator.DoStrategy(reader, lineBytes)
-			if operatorRequest != nil {
-				//log.Debug("解析后: " + string(operatorRequest.Data.RequestInfo()))
-				ch <- operatorRequest
-				if operatorRequest.Error != nil {
-					close(ch)
-					return
-				}
+			err := operator.DoStrategy(reader, lineBytes, ch)
+			if err != nil {
+				close(ch)
+				return
 			}
 		case '*':
 			operator := strategies.Operator{
 				ParseStrategy: &strategies.ArrayStrategy{},
 			}
-			operatorRequest := operator.DoStrategy(reader, lineBytes)
-			if operatorRequest != nil {
-				//log.Debug("解析后: " + string(operatorRequest.Data.RequestInfo()))
-				ch <- operatorRequest
-				if operatorRequest.Error != nil {
-					close(ch)
-					return
-				}
+			err := operator.DoStrategy(reader, lineBytes, ch)
+			if err != nil {
+				close(ch)
+				return
 			}
 		//整型（Integers）： 响应的首字节是 ":"
 		case ':':
