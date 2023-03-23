@@ -102,7 +102,9 @@ func parse(message netty.Message, ch chan<- *tcp.Request) {
 			//
 		default:
 			var args = bytes.Split(lineBytes, []byte{' '})
-			println("收到数据4", args)
+			ch <- &tcp.Request{
+				Data: request.NewMultiBulkRequest(args),
+			}
 		}
 	}
 }
