@@ -29,7 +29,7 @@ var (
 func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message) {
 	ch := make(chan *tcp.Request)
 	//TODO 配置化协程池大小
-	pools, err := pool.GetInstance(1000)
+	pools, err := pool.GetInstance(0)
 	if err != nil {
 		log.Errorf("run parse message with any error, func exit: ", err)
 		ctx.Channel().Close(err)
