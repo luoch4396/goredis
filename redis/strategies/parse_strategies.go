@@ -5,7 +5,7 @@ import (
 	"goredis/interface/tcp"
 	"goredis/pkg/errors"
 	"goredis/pkg/utils"
-	"goredis/redis/request"
+	"goredis/redis/exchange"
 	"io"
 	"strconv"
 )
@@ -15,11 +15,11 @@ type ParseStrategy interface {
 	Do(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error
 }
 
-type Operator struct {
+type ParseOperator struct {
 	ParseStrategy ParseStrategy
 }
 
-func (operator *Operator) DoStrategy(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error {
+func (operator *ParseOperator) DoParseStrategy(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error {
 	return operator.ParseStrategy.Do(reader, lineBytes, ch)
 }
 
@@ -33,7 +33,7 @@ func (*BulkStringsStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<-
 		return nil
 	} else if strLen == -1 {
 		ch <- &tcp.Request{
-			Data: request.NewEmptyMultiBulkRequest(),
+			Data: exchange.NewEmptyMultiBulkRequest(),
 		}
 	}
 	body := make([]byte, strLen+2)
@@ -42,7 +42,7 @@ func (*BulkStringsStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<-
 		return err
 	}
 	ch <- &tcp.Request{
-		Data: request.NewBulkRequest(body[:len(body)-2]),
+		Data: exchange.NewBulkRequest(body[:len(body)-2]),
 	}
 	return nil
 }
@@ -57,7 +57,7 @@ func (*ArrayStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.
 		return nil
 	} else if nStrs == 0 {
 		ch <- &tcp.Request{
-			Data: request.NewEmptyMultiBulkRequest(),
+			Data: exchange.NewEmptyMultiBulkRequest(),
 		}
 		return nil
 	}
@@ -90,15 +90,8 @@ func (*ArrayStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.
 	}
 	//解析为多行请求
 	ch <- &tcp.Request{
-		Data: request.NewMultiBulkRequest(lines),
+		Data: exchange.NewMultiBulkRequest(lines),
 	}
-	return nil
-}
-
-// RDBBulkStringsStrategy 解析rdb多行请求
-type RDBBulkStringsStrategy struct{}
-
-func (*RDBBulkStringsStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error {
 	return nil
 }
 

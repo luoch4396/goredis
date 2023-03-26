@@ -6,7 +6,7 @@ import (
 	"goredis/interface/tcp"
 	"goredis/pkg/log"
 	"goredis/pool"
-	"goredis/redis/request"
+	"goredis/redis/exchange"
 	"io"
 	"strings"
 )
@@ -32,6 +32,7 @@ func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message)
 	pools, err := pool.GetInstance(0)
 	if err != nil {
 		log.Errorf("run parse message with any errors, func exit: ", err)
+		//TODO: 需要包装redis客户端连接关闭操作
 		ctx.Channel().Close(err)
 		return
 	}
@@ -53,17 +54,17 @@ func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message)
 				ctx.Channel().Close(req.Error)
 				return
 			}
-			errReply := request.NewStatusRequest(req.Error.Error())
+			errReply := exchange.NewStatusRequest(req.Error.Error())
 			ctx.Write(errReply.RequestInfo())
 			continue
 		}
 		if req.Data == nil {
-			log.Error("empty payload")
+			log.Error("empty commands")
 			continue
 		}
-		r, ok := req.Data.(*request.MultiBulkRequest)
+		_, ok := req.Data.(*exchange.MultiBulkRequest)
 		if !ok {
-			log.Error("require multi bulk request")
+			log.Error("error from multi bulk exchange")
 			continue
 		}
 		//命令处理

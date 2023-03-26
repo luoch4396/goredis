@@ -12,7 +12,7 @@ type Request struct {
 }
 
 type Requests struct {
-	Datas []Request
+	Data []Request
 }
 
 type ErrorRequestInfo interface {

@@ -1,4 +1,4 @@
-package request
+package exchange
 
 import (
 	"goredis/pkg/utils"
@@ -97,23 +97,4 @@ func (r *EmptyMultiBulkRequest) RequestInfo() []byte {
 
 func NewEmptyMultiBulkRequest() *EmptyBulkRequest {
 	return &EmptyBulkRequest{}
-}
-
-// StandardErrorRequest 错误指令
-type StandardErrorRequest struct {
-	Status string
-}
-
-func NewStandardErrorRequest(status string) *StandardErrorRequest {
-	return &StandardErrorRequest{
-		Status: status,
-	}
-}
-
-func (r *StandardErrorRequest) RequestInfo() []byte {
-	return []byte(utils.NewStringBuilder("-", r.Status, CRLF))
-}
-
-func (r *StandardErrorRequest) Error() string {
-	return r.Status
 }

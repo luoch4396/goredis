@@ -7,7 +7,7 @@ import (
 	"github.com/go-netty/go-netty"
 	"goredis/interface/tcp"
 	"goredis/pkg/log"
-	"goredis/redis/request"
+	"goredis/redis/exchange"
 	"goredis/redis/strategies"
 	"io"
 	"runtime/debug"
@@ -53,29 +53,29 @@ func parse(message netty.Message, ch chan<- *tcp.Request) {
 			var content = string(lineBytes[1:])
 			println("收到数据1", content)
 			ch <- &tcp.Request{
-				Data: request.NewStatusRequest(content),
+				Data: exchange.NewStatusRequest(content),
 			}
 			//TODO rdb操作
 		//错误（Errors）： 响应的首字节是 "-"
 		case '-':
 			ch <- &tcp.Request{
-				Data: request.NewStandardErrorRequest(string(lineBytes[1:])),
+				Data: exchange.NewStandardErrorRequest(string(lineBytes[1:])),
 			}
 		//多行字符串（Bulk Strings）： 响应的首字节是"\$"
 		case '$':
-			operator := strategies.Operator{
+			operator := strategies.ParseOperator{
 				ParseStrategy: &strategies.BulkStringsStrategy{},
 			}
-			err := operator.DoStrategy(reader, lineBytes, ch)
+			err := operator.DoParseStrategy(reader, lineBytes, ch)
 			if err != nil {
 				close(ch)
 				return
 			}
 		case '*':
-			operator := strategies.Operator{
+			operator := strategies.ParseOperator{
 				ParseStrategy: &strategies.ArrayStrategy{},
 			}
-			err := operator.DoStrategy(reader, lineBytes, ch)
+			err := operator.DoParseStrategy(reader, lineBytes, ch)
 			if err != nil {
 				close(ch)
 				return
@@ -88,13 +88,13 @@ func parse(message netty.Message, ch chan<- *tcp.Request) {
 				continue
 			}
 			ch <- &tcp.Request{
-				Data: request.NewIntRequest(value),
+				Data: exchange.NewIntRequest(value),
 			}
 			//
 		default:
 			var args = bytes.Split(lineBytes, []byte{' '})
 			ch <- &tcp.Request{
-				Data: request.NewMultiBulkRequest(args),
+				Data: exchange.NewMultiBulkRequest(args),
 			}
 		}
 	}
