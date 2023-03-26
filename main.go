@@ -38,7 +38,7 @@ func main() {
 	//预初始化协程池
 	_, err := pool.GetInstance(1000)
 	if err != nil {
-		return
+		panic(err)
 	}
 	//开启tcp服务
 	redis.NewRedisServer(&redis.Config{

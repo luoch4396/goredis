@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/go-netty/go-netty"
 	"goredis/interface/tcp"
+	"goredis/pkg/errors"
 	"goredis/pkg/log"
 	"goredis/redis/exchange"
 	"goredis/redis/strategies"
@@ -53,13 +54,13 @@ func parse(message netty.Message, ch chan<- *tcp.Request) {
 			var content = string(lineBytes[1:])
 			println("收到数据1", content)
 			ch <- &tcp.Request{
-				Data: exchange.NewStatusRequest(content),
+				Data: exchange.NewStatusInfo(content),
 			}
 			//TODO rdb操作
 		//错误（Errors）： 响应的首字节是 "-"
 		case '-':
 			ch <- &tcp.Request{
-				Data: exchange.NewStandardErrorRequest(string(lineBytes[1:])),
+				Data: errors.NewStandardError(string(lineBytes[1:])),
 			}
 		//多行字符串（Bulk Strings）： 响应的首字节是"\$"
 		case '$':

@@ -1,8 +1,13 @@
 package db
 
 import (
+	"fmt"
 	"goredis/config"
+	"goredis/interface/tcp"
 	"goredis/pkg/log"
+	"goredis/redis"
+	"goredis/redis/exchange"
+	"runtime/debug"
 	"sync/atomic"
 )
 
@@ -30,4 +35,18 @@ func NewSingleServer() *SingleServer {
 	}
 	log.Info("create default 16 databases success!")
 	return singleServer
+}
+
+func (server *SingleServer) Exec(client redis.ClientConn, cmd [][]byte) (rep tcp.Info) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Warning(fmt.Sprintf("error occurs: %v\n%s", err, string(debug.Stack())))
+			rep = &exchange.BulkRequest{}
+		}
+	}()
+	return nil
+}
+
+func (server *SingleServer) Close() {
+
 }

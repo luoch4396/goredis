@@ -4,6 +4,7 @@ import (
 	"github.com/go-netty/go-netty"
 	"github.com/go-netty/go-netty/codec"
 	"goredis/interface/tcp"
+	"goredis/pkg/errors"
 	"goredis/pkg/log"
 	"goredis/pool"
 	"goredis/redis/exchange"
@@ -28,11 +29,10 @@ var (
 
 func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message) {
 	ch := make(chan *tcp.Request)
-	//TODO 配置化协程池大小
 	pools, err := pool.GetInstance(0)
 	if err != nil {
 		log.Errorf("run parse message with any errors, func exit: ", err)
-		//TODO: 需要包装redis客户端连接关闭操作
+		//TODO:需要包装redis客户端连接关闭操作
 		ctx.Channel().Close(err)
 		return
 	}
@@ -54,8 +54,8 @@ func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message)
 				ctx.Channel().Close(req.Error)
 				return
 			}
-			errReply := exchange.NewStatusRequest(req.Error.Error())
-			ctx.Write(errReply.RequestInfo())
+			errRep := errors.NewStandardError(req.Error.Error())
+			ctx.Write(errRep.Info())
 			continue
 		}
 		if req.Data == nil {

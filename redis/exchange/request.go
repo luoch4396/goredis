@@ -1,6 +1,7 @@
 package exchange
 
 import (
+	"bytes"
 	"goredis/pkg/utils"
 	"strconv"
 )
@@ -10,19 +11,13 @@ type BulkRequest struct {
 	Arg []byte
 }
 
-var (
-	nullBulkBytes       = []byte("$-1\r\n")
-	CRLF                = "\r\n"
-	emptyMultiBulkBytes = []byte("*0\r\n")
-)
-
 func NewBulkRequest(arg []byte) *BulkRequest {
 	return &BulkRequest{
 		Arg: arg,
 	}
 }
 
-func (r *BulkRequest) RequestInfo() []byte {
+func (r *BulkRequest) Info() []byte {
 	if r.Arg == nil {
 		return nullBulkBytes
 	}
@@ -43,23 +38,18 @@ func NewMultiBulkRequest(args [][]byte) *MultiBulkRequest {
 	}
 }
 
-func (r *MultiBulkRequest) RequestInfo() []byte {
-	return nil
-}
-
-// StatusRequest 状态指令
-type StatusRequest struct {
-	Status string
-}
-
-func NewStatusRequest(status string) *StatusRequest {
-	return &StatusRequest{
-		Status: status,
+func (r *MultiBulkRequest) Info() []byte {
+	argLen := len(r.Args)
+	var buf bytes.Buffer
+	buf.WriteString("*" + strconv.Itoa(argLen) + CRLF)
+	for _, arg := range r.Args {
+		if arg == nil {
+			buf.WriteString("$-1" + CRLF)
+		} else {
+			buf.WriteString("$" + strconv.Itoa(len(arg)) + CRLF + string(arg) + CRLF)
+		}
 	}
-}
-
-func (r *StatusRequest) RequestInfo() []byte {
-	return nil
+	return buf.Bytes()
 }
 
 // IntRequest 解析为数值
@@ -73,14 +63,14 @@ func NewIntRequest(code int64) *IntRequest {
 	}
 }
 
-func (r *IntRequest) RequestInfo() []byte {
+func (r *IntRequest) Info() []byte {
 	return []byte(":" + strconv.FormatInt(r.Code, 10) + CRLF)
 }
 
 // EmptyBulkRequest 空字符串
 type EmptyBulkRequest struct{}
 
-func (r *EmptyBulkRequest) RequestInfo() []byte {
+func (r *EmptyBulkRequest) Info() []byte {
 	return nullBulkBytes
 }
 
@@ -91,7 +81,7 @@ func NewNullBulkRequest() *EmptyBulkRequest {
 // EmptyMultiBulkRequest 多行空字符串
 type EmptyMultiBulkRequest struct{}
 
-func (r *EmptyMultiBulkRequest) RequestInfo() []byte {
+func (r *EmptyMultiBulkRequest) Info() []byte {
 	return emptyMultiBulkBytes
 }
 
