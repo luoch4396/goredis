@@ -36,8 +36,8 @@ func GetInstance(size int) error {
 	return err
 }
 
-// Submit 提交任务
-func Submit(task func()) error {
+// Async 提交任务
+func Async(task func()) error {
 	if instance == nil {
 		err := GetInstance(1000)
 		if err != nil {

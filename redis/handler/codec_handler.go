@@ -28,7 +28,7 @@ var (
 )
 
 func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message) {
-	err := pool.Submit(func() {
+	err := pool.Async(func() {
 		handleRead(ctx, message)
 	})
 	if err != nil {
@@ -38,7 +38,7 @@ func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message)
 
 func handleRead(ctx netty.InboundContext, message netty.Message) {
 	ch := make(chan *tcp.Request)
-	err := pool.Submit(func() {
+	err := pool.Async(func() {
 		parseStreaming(message, ch)
 	})
 	if err != nil {
@@ -76,7 +76,7 @@ func handleRead(ctx netty.InboundContext, message netty.Message) {
 		//} else {
 		//	ctx.Write(unknownOperation)
 		//}
-		err = pool.Submit(func() {
+		err = pool.Async(func() {
 			//result := h.db.Exec(message, r.Args)
 		})
 	}
