@@ -12,7 +12,7 @@ func NewStringBuilder[T []byte | string](strs ...T) string {
 	var stringBuilder strings.Builder
 	//stringBuilder.Grow(n * len(str))
 	for i := 0; i < len(strs); i++ {
-		stringBuilder.Write([]byte(strs[i]))
+		stringBuilder.WriteString(string(strs[i]))
 	}
 	return stringBuilder.String()
 }
