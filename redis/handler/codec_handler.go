@@ -42,7 +42,7 @@ func handleRead(ctx netty.InboundContext, message netty.Message) {
 		parseStreaming(message, ch)
 	})
 	if err != nil {
-		log.Errorf("run parse message with any errors, func exit: ", err)
+		log.Errorf("an exception occurred during call the handleRead func, it will be exited: ", err)
 		ctx.Channel().Close(err)
 		return
 	}
