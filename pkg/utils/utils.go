@@ -5,19 +5,14 @@ import (
 )
 
 // NewStringBuilder 字符串拼接
-func NewStringBuilder(strs ...string) string {
+func NewStringBuilder[T []byte | string](strs ...T) string {
+	if strs == nil || len(strs) == 0 {
+		return ""
+	}
 	var stringBuilder strings.Builder
 	//stringBuilder.Grow(n * len(str))
 	for i := 0; i < len(strs); i++ {
-		stringBuilder.WriteString(strs[i])
-	}
-	return stringBuilder.String()
-}
-
-func NewStringBuilder0(bytes ...[]byte) string {
-	var stringBuilder strings.Builder
-	for i := 0; i < len(bytes); i++ {
-		stringBuilder.Write(bytes[i])
+		stringBuilder.Write([]byte(strs[i]))
 	}
 	return stringBuilder.String()
 }
