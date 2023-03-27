@@ -2,6 +2,7 @@ package redis
 
 import (
 	"github.com/go-netty/go-netty"
+	"goredis/pkg/utils"
 	"sync"
 )
 
@@ -51,6 +52,7 @@ type ClientConnBuilder struct {
 }
 
 func (builder *ClientConnBuilder) Build() *ClientConn {
+	builder.conn.lock = utils.NewLightLock(16)
 	return builder.conn
 }
 
