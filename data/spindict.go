@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 )
 
-// SpinDict 使用了cas+自旋+退避轻量级锁
+// SpinDict TODO:尝试使用比锁跟轻量级的实现，目前并未实现
 type SpinDict struct {
 	spinDictShard []*spinDictShard
 	count         int32

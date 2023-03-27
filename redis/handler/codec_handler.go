@@ -83,10 +83,10 @@ func handleRead(ctx netty.InboundContext, message netty.Message) {
 }
 
 func (*codecHandler) HandleWrite(ctx netty.OutboundContext, message netty.Message) {
-	switch s := message.(type) {
-	case string:
-		ctx.HandleWrite(strings.NewReader(s))
-	default:
-		ctx.HandleWrite(message)
-	}
+	//switch s := message.(type) {
+	//case string:
+	//	ctx.HandleWrite(strings.NewReader(s))
+	//default:
+	//	ctx.HandleWrite(message)
+	//}
 }
