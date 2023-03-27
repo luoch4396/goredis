@@ -16,7 +16,7 @@ import (
 )
 
 // 根据RESP解析为统一格式返回
-func parse(message netty.Message, ch chan<- *tcp.Request) {
+func parseStreaming(message netty.Message, ch chan<- *tcp.Request) {
 	defer func() {
 		//错误恢复
 		if err := recover(); err != nil {

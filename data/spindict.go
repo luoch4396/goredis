@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 )
 
-// SpinDict 备选方案 使用了轻量级锁
+// SpinDict 使用了cas+自旋+退避轻量级锁
 type SpinDict struct {
 	spinDictShard []*spinDictShard
 	count         int32
@@ -28,9 +28,7 @@ func NewSpinDict(shardCount int) *SpinDict {
 	for i := 0; i < shardCount; i++ {
 		table[i] = &spinDictShard{
 			table: make(map[string]interface{}),
-			lock: &utils.LightLocker{
-				MaxBackoff: 16,
-			},
+			lock:  utils.NewLightLock(16),
 		}
 	}
 	var spinDict = &SpinDict{
@@ -97,8 +95,9 @@ func (dict *SpinDict) Get(key string) (value interface{}, exists bool) {
 	var hashCode = hasher.Sum32([]byte(key))
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	//TODO:读是否可以不加锁？
+	//s.lock.Lock()
+	//defer s.lock.Unlock()
 	value, exists = s.table[key]
 	return
 }
@@ -150,9 +149,9 @@ func (dict *SpinDict) ForEach(consumer _interface.DictConsumer) {
 		return
 	}
 	for _, shard := range dict.spinDictShard {
-		shard.lock.Lock()
+		//shard.lock.Lock()
 		res := func() bool {
-			defer shard.lock.Unlock()
+			//defer shard.lock.Unlock()
 			for key, value := range shard.table {
 				var isNext = consumer(key, value)
 				if !isNext {

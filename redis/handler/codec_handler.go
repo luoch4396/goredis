@@ -28,16 +28,18 @@ var (
 )
 
 func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message) {
-	ch := make(chan *tcp.Request)
-	pools, err := pool.GetInstance(0)
+	err := pool.Submit(func() {
+		handleRead(ctx, message)
+	})
 	if err != nil {
-		log.Errorf("run parse message with any errors, func exit: ", err)
-		//TODO:需要包装redis客户端连接关闭操作
 		ctx.Channel().Close(err)
-		return
 	}
-	err = pools.Pool.Submit(func() {
-		parse(message, ch)
+}
+
+func handleRead(ctx netty.InboundContext, message netty.Message) {
+	ch := make(chan *tcp.Request)
+	err := pool.Submit(func() {
+		parseStreaming(message, ch)
 	})
 	if err != nil {
 		log.Errorf("run parse message with any errors, func exit: ", err)
@@ -50,7 +52,7 @@ func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message)
 			if req.Error == io.EOF ||
 				req.Error == io.ErrUnexpectedEOF ||
 				strings.Contains(req.Error.Error(), "use a closed network channel") {
-				log.Info("handle message with errors, channel will be closed: " + ctx.Channel().RemoteAddr())
+				log.Errorf("handle message with errors, channel will be closed: " + ctx.Channel().RemoteAddr())
 				ctx.Channel().Close(req.Error)
 				return
 			}
@@ -74,6 +76,9 @@ func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message)
 		//} else {
 		//	ctx.Write(unknownOperation)
 		//}
+		err = pool.Submit(func() {
+			//result := h.db.Exec(message, r.Args)
+		})
 	}
 }
 

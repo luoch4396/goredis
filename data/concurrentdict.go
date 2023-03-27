@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 )
 
+// ConcurrentDict 适用读多写少场景
 type ConcurrentDict struct {
 	dictShard  []*dictShard
 	count      int32

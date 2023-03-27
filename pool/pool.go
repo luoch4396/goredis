@@ -2,41 +2,47 @@ package pool
 
 import (
 	"github.com/panjf2000/ants/v2"
-	"goredis/pkg/utils"
+	"sync"
 )
 
 type AntsPool struct {
 	size int
-	Pool *ants.Pool
+	pool *ants.Pool
 }
 
 var (
 	instance *AntsPool
-	lock     = utils.NewLightLock(16)
+	once     sync.Once
 )
 
-func GetInstance(size int) (*AntsPool, error) {
+// GetInstance 获取协程池
+func GetInstance(size int) error {
 	if size <= 0 {
 		size = 1
 	}
-	if instance != nil {
-		return instance, nil
-	} else {
-		lock.Lock()
-		defer lock.Unlock()
-		//双重判断
-		if instance != nil {
-			return instance, nil
-		} else {
+	var err error
+	once.Do(func() {
+		if instance == nil {
 			pool, err := ants.NewPool(size)
 			if err != nil {
-				return nil, err
+				return
 			}
 			instance = &AntsPool{
-				Pool: pool,
+				pool: pool,
 				size: size,
 			}
-			return instance, nil
+		}
+	})
+	return err
+}
+
+// Submit 提交任务
+func Submit(task func()) error {
+	if instance == nil {
+		err := GetInstance(1000)
+		if err != nil {
+			return err
 		}
 	}
+	return instance.pool.Submit(task)
 }

@@ -12,17 +12,25 @@ var (
 
 // NilPointerError 空指针
 type NilPointerError struct {
-	message string
+	Msg string
 }
 
 func (e *NilPointerError) Error() string {
-	return e.message
+	return e.Msg
+}
+
+func NewNilPointerError(msg string) error {
+	return errors.New(error.Error(
+		&NilPointerError{
+			Msg: msg,
+		},
+	))
 }
 
 func CheckIsNotNull(object interface{}) (bool, error) {
 	if object == nil {
 		return false, &NilPointerError{
-			message: "nil errors: [object] must be not null!",
+			Msg: "nil errors: [object] must be not null!",
 		}
 	}
 	return true, nil
