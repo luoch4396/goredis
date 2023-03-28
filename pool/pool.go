@@ -38,11 +38,15 @@ func GetInstance(size int) error {
 
 // Async 提交任务
 func Async(task func()) error {
-	if instance == nil {
-		err := GetInstance(1000)
-		if err != nil {
-			return err
-		}
-	}
+	//if instance == nil {
+	//	err := GetInstance(1000)
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
+	return instance.pool.Submit(task)
+}
+
+func AsyncFunc(task func()) error {
 	return instance.pool.Submit(task)
 }

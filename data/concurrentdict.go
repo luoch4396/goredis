@@ -56,21 +56,11 @@ func computeCapacity(param int) (size int) {
 }
 
 func (dict *ConcurrentDict) spread(hashCode uint32) uint32 {
-	_, err := errors.CheckIsNotNull(dict)
-	if err != nil {
-		log.Errorf("dict ", err)
-		return 0
-	}
 	var tableSize = uint32(len(dict.dictShard))
 	return (tableSize - 1) & hashCode
 }
 
 func (dict *ConcurrentDict) getShard(index uint32) *dictShard {
-	_, err := errors.CheckIsNotNull(dict)
-	if err != nil {
-		log.Errorf("dict ", err)
-		return nil
-	}
 	return dict.dictShard[index]
 }
 

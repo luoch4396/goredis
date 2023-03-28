@@ -40,21 +40,11 @@ func NewSpinDict(shardCount int) *SpinDict {
 }
 
 func (dict *SpinDict) spread(hashCode uint32) uint32 {
-	_, err := errors.CheckIsNotNull(dict)
-	if err != nil {
-		log.Errorf("dict ", err)
-		return 0
-	}
 	var tableSize = uint32(len(dict.spinDictShard))
 	return (tableSize - 1) & hashCode
 }
 
 func (dict *SpinDict) getShard(index uint32) *spinDictShard {
-	_, err := errors.CheckIsNotNull(dict)
-	if err != nil {
-		log.Errorf("dict ", err)
-		return nil
-	}
 	return dict.spinDictShard[index]
 }
 
@@ -96,8 +86,8 @@ func (dict *SpinDict) Get(key string) (value interface{}, exists bool) {
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
 	//TODO:读是否可以不加锁？
-	//s.lock.Lock()
-	//defer s.lock.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	value, exists = s.table[key]
 	return
 }
