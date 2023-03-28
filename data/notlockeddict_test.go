@@ -13,7 +13,7 @@ type test2 struct {
 	e interface{}
 }
 
-var err = pool.GetInstance(100)
+var _ = pool.GetInstance(100)
 
 func BenchmarkSpinDictPutByPool(b *testing.B) {
 	test2 := test2{
