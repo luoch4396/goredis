@@ -2,6 +2,7 @@ package data
 
 import (
 	"goredis/pool"
+	"goredis/pool/gopool"
 	"testing"
 )
 
@@ -12,8 +13,6 @@ type test2 struct {
 	d int64
 	e interface{}
 }
-
-var _ = pool.GetInstance(100)
 
 func BenchmarkSpinDictPutByPool(b *testing.B) {
 	test2 := test2{
@@ -45,7 +44,7 @@ func BenchmarkSpinDictGetByPool(b *testing.B) {
 	dict := NewSpinDict(16)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = pool.Async(func() {
+		gopool.Go(func() {
 			dict.Get("1")
 		})
 	}

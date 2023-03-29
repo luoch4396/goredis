@@ -1,7 +1,7 @@
 package data
 
 import (
-	"goredis/pool"
+	"goredis/pool/gopool"
 	"testing"
 )
 
@@ -13,8 +13,6 @@ type test1 struct {
 	e interface{}
 }
 
-var _ = pool.GetInstance(100)
-
 func BenchmarkConcurrentDictPutByPool(b *testing.B) {
 	test1 := test1{
 		a: "1",
@@ -23,7 +21,7 @@ func BenchmarkConcurrentDictPutByPool(b *testing.B) {
 	dict := NewConcurrentDict(16)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = pool.Async(func() {
+		gopool.Go(func() {
 			dict.Put("1", test1)
 		})
 	}
@@ -45,8 +43,12 @@ func BenchmarkConcurrentDictGetByPool(b *testing.B) {
 	dict := NewConcurrentDict(16)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = pool.Async(func() {
+		gopool.Go(func() {
 			dict.Get("1")
+			dict.Put("1", "1")
+			dict.Get("1")
+			dict.Put("2", "1")
+			dict.Get("2")
 		})
 	}
 }
@@ -55,6 +57,12 @@ func BenchmarkConcurrentDictGet(b *testing.B) {
 	dict := NewConcurrentDict(16)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		go dict.Get("1")
+		go func() {
+			dict.Get("1")
+			dict.Put("1", "1")
+			dict.Get("1")
+			dict.Put("2", "1")
+			dict.Get("2")
+		}()
 	}
 }
