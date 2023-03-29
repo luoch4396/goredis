@@ -1,7 +1,6 @@
 package data
 
 import (
-	"goredis/pool"
 	"goredis/pool/gopool"
 	"testing"
 )
@@ -22,7 +21,7 @@ func BenchmarkSpinDictPutByPool(b *testing.B) {
 	dict := NewSpinDict(16)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = pool.Async(func() {
+		gopool.Go(func() {
 			dict.Put("1", test2)
 		})
 	}
