@@ -37,7 +37,7 @@ func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message)
 func handleRead(ctx netty.InboundContext, message netty.Message) {
 	ch := make(chan *tcp.Request)
 	var parseStreamingFunc = func() {
-		handleRead(ctx, message)
+		parseStreaming(message, ch)
 	}
 	gopool.Go(parseStreamingFunc)
 	//循环结果

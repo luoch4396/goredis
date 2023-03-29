@@ -11,18 +11,17 @@ import (
 	"goredis/redis/exchange"
 	"goredis/redis/strategies"
 	"io"
-	"runtime/debug"
 	"strconv"
 )
 
 // 根据RESP解析为统一格式返回
 func parseStreaming(message netty.Message, ch chan<- *tcp.Request) {
-	defer func() {
-		//错误恢复
-		if err := recover(); err != nil {
-			err = fmt.Errorf(string(debug.Stack()), err)
-		}
-	}()
+	//defer func() {
+	//	//错误恢复
+	//	if err := recover(); err != nil {
+	//		err = fmt.Errorf(string(debug.Stack()), err)
+	//	}
+	//}()
 	t, ok := message.(io.Reader)
 	if !ok {
 		var err = fmt.Errorf("message codec produce any errors")
