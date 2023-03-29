@@ -6,7 +6,7 @@ import (
 	"goredis/interface/tcp"
 	"goredis/pkg/errors"
 	"goredis/pkg/log"
-	"goredis/pool"
+	"goredis/pool/gopool"
 	"goredis/redis/exchange"
 	"io"
 	"strings"
@@ -28,24 +28,18 @@ var (
 )
 
 func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message) {
-	err := pool.Async(func() {
+	var handleReadFunc = func() {
 		handleRead(ctx, message)
-	})
-	if err != nil {
-		ctx.Channel().Close(err)
 	}
+	gopool.Go(handleReadFunc)
 }
 
 func handleRead(ctx netty.InboundContext, message netty.Message) {
 	ch := make(chan *tcp.Request)
-	err := pool.Async(func() {
-		parseStreaming(message, ch)
-	})
-	if err != nil {
-		log.Errorf("an exception occurred during call the handleRead func, it will be exited: ", err)
-		ctx.Channel().Close(err)
-		return
+	var parseStreamingFunc = func() {
+		handleRead(ctx, message)
 	}
+	gopool.Go(parseStreamingFunc)
 	//循环结果
 	for req := range ch {
 		if req.Error != nil {
@@ -76,7 +70,7 @@ func handleRead(ctx netty.InboundContext, message netty.Message) {
 		//} else {
 		//	ctx.Write(unknownOperation)
 		//}
-		err = pool.Async(func() {
+		gopool.Go(func() {
 			//result := h.db.Exec(message, r.Args)
 		})
 	}
