@@ -1,21 +1,20 @@
-package strategies
+package db
 
 import (
-	"goredis/config"
-	"goredis/db"
 	"goredis/interface/tcp"
 	"goredis/pkg/errors"
 	"goredis/pkg/log"
-	"goredis/redis"
+	"goredis/redis/config"
+	"goredis/redis/conn"
 	"strings"
 	"sync/atomic"
 )
 
 var (
 	//定义策略
-	pingStrategy = db.NewCmdOperator(&db.PingStrategy{})
-	authStrategy = db.NewCmdOperator(&db.AuthStrategy{})
-	infoStrategy = db.NewCmdOperator(&db.InfoStrategy{})
+	pingStrategy = NewCmdOperator(&PingStrategy{})
+	authStrategy = NewCmdOperator(&AuthStrategy{})
+	infoStrategy = NewCmdOperator(&InfoStrategy{})
 )
 
 type SingleServer struct {
@@ -34,7 +33,7 @@ func NewSingleServer() *SingleServer {
 		configs.Server.Databases = 16
 	}
 	for i := range singleServer.dbs {
-		var singleDB = db.NewDB()
+		var singleDB = NewDB()
 		singleDB.Index = i
 		var oneDb = &atomic.Value{}
 		oneDb.Store(singleDB)
@@ -44,7 +43,7 @@ func NewSingleServer() *SingleServer {
 	return singleServer
 }
 
-func (server *SingleServer) Exec(client *redis.ClientConn, cmdBytes [][]byte) (rep tcp.Info) {
+func (server *SingleServer) Exec(client *conn.ClientConn, cmdBytes [][]byte) (rep tcp.Info) {
 	//TODO:错误恢复 移动至协程池？
 	//defer func() {
 	//	if err := recover(); err != nil {
@@ -77,7 +76,7 @@ func (server *SingleServer) Close() {
 
 }
 
-func isAuthenticated(client *redis.ClientConn) bool {
+func isAuthenticated(client *conn.ClientConn) bool {
 	//if config.Properties.RequirePass == "" {
 	//	return true
 	//}

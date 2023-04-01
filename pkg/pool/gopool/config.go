@@ -4,7 +4,7 @@ const (
 	defaultScalaThreshold = 8
 )
 
-// Config is used to config pool.
+// Config is used to config base.
 type Config struct {
 	// threshold for scale.
 	// new goroutine is created if len(task chan) > ScaleThreshold.

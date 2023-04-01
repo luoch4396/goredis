@@ -3,9 +3,9 @@ package data
 import (
 	_interface "goredis/data/interface"
 	"goredis/pkg/errors"
+	"goredis/pkg/hasher"
 	"goredis/pkg/log"
 	"goredis/pkg/utils"
-	"goredis/pkg/utils/hasher"
 	"sync"
 	"sync/atomic"
 )

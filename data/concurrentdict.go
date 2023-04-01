@@ -3,8 +3,8 @@ package data
 import (
 	"goredis/data/interface"
 	"goredis/pkg/errors"
+	"goredis/pkg/hasher"
 	"goredis/pkg/log"
-	"goredis/pkg/utils/hasher"
 	"math"
 	"sync"
 	"sync/atomic"

@@ -103,18 +103,20 @@ func (d *digest32) Sum32() (h1 uint32) {
 
 // Sum32 returns the MurmurHash3 sum of interface. It is equivalent to the
 // following sequence (without the extra burden and the extra allocation):
-//     hasher := New32()
-//     hasher.Write(interface)
-//     return hasher.Sum32()
+//
+//	hasher := New32()
+//	hasher.Write(interface)
+//	return hasher.Sum32()
 func Sum32(data []byte) uint32 {
 	return Sum32WithSeed(data, 0)
 }
 
 // Sum32WithSeed returns the MurmurHash3 sum of interface. It is equivalent to the
 // following sequence (without the extra burden and the extra allocation):
-//     hasher := New32WithSeed(seed)
-//     hasher.Write(interface)
-//     return hasher.Sum32()
+//
+//	hasher := New32WithSeed(seed)
+//	hasher.Write(interface)
+//	return hasher.Sum32()
 func Sum32WithSeed(data []byte, seed uint32) uint32 {
 
 	h1 := seed
@@ -126,7 +128,7 @@ func Sum32WithSeed(data []byte, seed uint32) uint32 {
 	}
 	p1 := p + uintptr(4*nblocks)
 	for ; p < p1; p += 4 {
-		k1 := *(*uint32)(unsafe.Pointer(p))
+		k1 := *(*uint32)(unsafe.Pointer(&p))
 
 		k1 *= c132
 		k1 = (k1 << 15) | (k1 >> 17) // rotl32(k1, 15)

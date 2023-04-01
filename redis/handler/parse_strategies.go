@@ -1,4 +1,4 @@
-package strategies
+package handler
 
 import (
 	"bufio"

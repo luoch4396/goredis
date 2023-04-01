@@ -1,9 +1,9 @@
-package redis
+package conn
 
 import (
 	"github.com/go-netty/go-netty"
+	"goredis/pkg/pool/gopool"
 	"goredis/pkg/utils"
-	"goredis/pool/gopool"
 	"sync"
 	"time"
 )

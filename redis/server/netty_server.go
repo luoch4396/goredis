@@ -1,11 +1,11 @@
-package redis
+package server
 
 import (
 	"github.com/go-netty/go-netty"
 	"github.com/go-netty/go-netty/transport/tcp"
+	"goredis/db"
 	"goredis/pkg/log"
 	"goredis/redis/handler"
-	"goredis/redis/strategies"
 	"time"
 )
 
@@ -15,10 +15,14 @@ type Config struct {
 	Timeout  time.Duration `config:"timeout"`
 }
 
+// NewRedisDB 创建redis数据库，通过处理器去调用db执行操作
+func NewRedisDB() {
+	//todo 后期增加cluster 模式，现在仅有单机模式
+	db.NewSingleServer()
+}
+
 // NewRedisServer 实现一个netty redis
 func NewRedisServer(config *Config) {
-	//todo 后期增加cluster 模式，现在仅有单机模式
-	strategies.NewSingleServer()
 	var childInitializer = func(channel netty.Channel) {
 		channel.Pipeline().
 			AddLast(handler.EchoHandler{}).

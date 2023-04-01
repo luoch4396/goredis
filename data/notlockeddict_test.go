@@ -1,7 +1,7 @@
 package data
 
 import (
-	"goredis/pool/gopool"
+	"goredis/pkg/pool/gopool"
 	"testing"
 )
 

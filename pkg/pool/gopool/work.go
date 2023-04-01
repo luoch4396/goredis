@@ -46,7 +46,7 @@ func (w *worker) run() {
 						if w.pool.panicHandler != nil {
 							w.pool.panicHandler(t.ctx, r)
 						} else {
-							msg := fmt.Sprintf("GOPOOL: panic in pool: %s: %v: %s", w.pool.name, r, debug.Stack())
+							msg := fmt.Sprintf("GOPOOL: panic in base: %s: %v: %s", w.pool.name, r, debug.Stack())
 							log.Error(msg)
 						}
 					}

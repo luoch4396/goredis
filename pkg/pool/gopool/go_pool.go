@@ -11,12 +11,12 @@ var defaultPool Pool
 var poolMap sync.Map
 
 func init() {
-	defaultPool = NewPool("gopool.DefaultPool", 1000, NewConfig())
+	defaultPool = NewPool("pool.DefaultPool", 1000, NewConfig())
 }
 
 // Go is an alternative to the go keyword, which is able to recover panic.
 //
-//	gopool.Go(func(arg interface{}){
+//	pool.Go(func(arg interface{}){
 //	    ...
 //	}(nil))
 func Go(f func()) {
@@ -29,23 +29,23 @@ func CtxGo(ctx context.Context, f func()) {
 	defaultPool.CtxGo(ctx, f)
 }
 
-// SetCap is not recommended to be called, this func changes the global pool's capacity which will affect other callers.
+// SetCap is not recommended to be called, this func changes the global base's capacity which will affect other callers.
 func SetCap(cap int32) {
 	defaultPool.SetCap(cap)
 }
 
-// SetPanicHandler sets the panic handler for the global pool.
+// SetPanicHandler sets the panic handler for the global base.
 func SetPanicHandler(f func(context.Context, interface{})) {
 	defaultPool.SetPanicHandler(f)
 }
 
-// WorkerCount returns the number of global default pool's running workers
+// WorkerCount returns the number of global default base's running workers
 func WorkerCount() int32 {
 	return defaultPool.WorkerCount()
 }
 
-// RegisterPool registers a new pool to the global map.
-// GetPool can be used to get the registered pool by name.
+// RegisterPool registers a new base to the global map.
+// GetPool can be used to get the registered base by name.
 // returns error if the same name is registered.
 func RegisterPool(p Pool) error {
 	_, loaded := poolMap.LoadOrStore(p.Name(), p)
@@ -55,7 +55,7 @@ func RegisterPool(p Pool) error {
 	return nil
 }
 
-// GetPool gets the registered pool by name.
+// GetPool gets the registered base by name.
 // Returns nil if not registered.
 func GetPool(name string) Pool {
 	p, ok := poolMap.Load(name)

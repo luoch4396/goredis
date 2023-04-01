@@ -1,10 +1,10 @@
 package main
 
 import (
-	"goredis/config"
 	"goredis/pkg/log"
 	"goredis/pkg/utils"
-	"goredis/redis"
+	"goredis/redis/config"
+	"goredis/redis/server"
 	"os"
 	"strconv"
 )
@@ -34,8 +34,9 @@ func main() {
 		BuildLevel(configs.Log.LogLevel).
 		BuildFile(fs).
 		Build()
+	server.NewRedisDB()
 	//开启tcp服务
-	redis.NewRedisServer(&redis.Config{
+	server.NewRedisServer(&server.Config{
 		Address: utils.NewStringBuilder(configs.Server.Address,
 			":", strconv.FormatInt(int64(configs.Server.Port), 10)),
 	})

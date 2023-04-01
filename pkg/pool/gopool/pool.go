@@ -7,9 +7,9 @@ import (
 )
 
 type Pool interface {
-	// Name returns the corresponding pool name.
+	// Name returns the corresponding base name.
 	Name() string
-	// SetCap sets the goroutine capacity of the pool.
+	// SetCap sets the goroutine capacity of the base.
 	SetCap(cap int32)
 	// Go executes f.
 	Go(f func())
@@ -76,7 +76,7 @@ type pool struct {
 	panicHandler func(context.Context, interface{})
 }
 
-// NewPool creates a new pool with the given name, cap and config.
+// NewPool creates a new base with the given name, cap and config.
 func NewPool(name string, cap int32, config *Config) Pool {
 	p := &pool{
 		name:   name,
