@@ -43,8 +43,7 @@ func handleRead(ctx netty.InboundContext, message netty.Message) {
 	//循环结果
 	for req := range ch {
 		if req.Error != nil {
-			if req.Error == io.EOF ||
-				req.Error == io.ErrUnexpectedEOF ||
+			if req.Error == io.EOF || req.Error == io.ErrUnexpectedEOF ||
 				strings.Contains(req.Error.Error(), "use a closed network channel") {
 				log.Errorf("handle message with errors, channel will be closed: " + ctx.Channel().RemoteAddr())
 				ctx.Channel().Close(req.Error)
@@ -70,9 +69,6 @@ func handleRead(ctx netty.InboundContext, message netty.Message) {
 		//} else {
 		//	ctx.Write(unknownOperation)
 		//}
-		gopool.Go(func() {
-			//result := h.db.Exec(message, r.Args)
-		})
 	}
 }
 

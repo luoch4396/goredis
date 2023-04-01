@@ -2,7 +2,6 @@ package config
 
 import (
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
 	"os"
 )
 
@@ -34,7 +33,7 @@ func NewConfig(globalConfigFileName string) {
 	if configFileName != "" {
 		globalConfigFileName = configFileName
 	}
-	file, err := ioutil.ReadFile(globalConfigFileName)
+	file, err := os.ReadFile(globalConfigFileName)
 	if err != nil {
 		panic(err)
 	}

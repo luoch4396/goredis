@@ -14,8 +14,15 @@ import (
 	"strconv"
 )
 
+var (
+	//定义策略
+	arrayStrategy       = strategies.NewParseOperator(&strategies.ArrayStrategy{})
+	bulkStringsStrategy = strategies.NewParseOperator(&strategies.BulkStringsStrategy{})
+)
+
 // 根据RESP解析为统一格式返回
 func parseStreaming(message netty.Message, ch chan<- *tcp.Request) {
+	//TODO:错误恢复 移动至协程池？
 	//defer func() {
 	//	//错误恢复
 	//	if err := recover(); err != nil {
@@ -63,19 +70,13 @@ func parseStreaming(message netty.Message, ch chan<- *tcp.Request) {
 			}
 		//多行字符串（Bulk Strings）： 响应的首字节是"\$"
 		case '$':
-			operator := strategies.ParseOperator{
-				ParseStrategy: &strategies.BulkStringsStrategy{},
-			}
-			err := operator.DoParseStrategy(reader, lineBytes, ch)
+			err := bulkStringsStrategy.DoParseStrategy(reader, lineBytes, ch)
 			if err != nil {
 				close(ch)
 				return
 			}
 		case '*':
-			operator := strategies.ParseOperator{
-				ParseStrategy: &strategies.ArrayStrategy{},
-			}
-			err := operator.DoParseStrategy(reader, lineBytes, ch)
+			err := arrayStrategy.DoParseStrategy(reader, lineBytes, ch)
 			if err != nil {
 				close(ch)
 				return

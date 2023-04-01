@@ -62,11 +62,11 @@ func (w *worker) close() {
 	w.pool.decWorkerCount()
 }
 
-func (w *worker) zero() {
+func (w *worker) clear() {
 	w.pool = nil
 }
 
 func (w *worker) Recycle() {
-	w.zero()
+	w.clear()
 	workerPool.Put(w)
 }

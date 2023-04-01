@@ -63,16 +63,16 @@ type pool struct {
 	cap int32
 	// Configuration information
 	config *Config
-	// linked list of tasks
+	// 所有需要执行的任务形成一个链表结构
 	taskHead  *task
 	taskTail  *task
 	taskLock  sync.Mutex
 	taskCount int32
 
-	// Record the number of running workers
+	// 正在跑的任务数量
 	workerCount int32
 
-	// This method will be called when the worker panic
+	// 任务的错误处理器
 	panicHandler func(context.Context, interface{})
 }
 

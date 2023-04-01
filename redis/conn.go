@@ -3,7 +3,9 @@ package redis
 import (
 	"github.com/go-netty/go-netty"
 	"goredis/pkg/utils"
+	"goredis/pool/gopool"
 	"sync"
+	"time"
 )
 
 // 对象池
@@ -32,6 +34,8 @@ type ClientConn struct {
 	selectedDB int
 	//当前可能的角色
 	role string
+	//等待客户端关闭
+	waitFinished sync.WaitGroup
 }
 
 func NewClientConnBuilder() Builder {
@@ -76,11 +80,10 @@ func (conn *ClientConn) Write(b []byte) bool {
 	if len(b) == 0 {
 		return false
 	}
-	//conn.sendingData.Add(1)
-	//defer func() {
-	//	conn.sendingData.Done()
-	//}()
-
+	conn.waitFinished.Add(1)
+	defer func() {
+		conn.waitFinished.Done()
+	}()
 	return conn.channel.Write(b)
 }
 
@@ -97,4 +100,21 @@ func (conn *ClientConn) Close() {
 	conn.password = ""
 	conn.selectedDB = 0
 	connPool.Put(conn)
+}
+
+func waitTimeout(conn *ClientConn, timeout time.Duration) bool {
+	c := make(chan struct{}, 1)
+	gopool.Go(func() {
+		defer close(c)
+		conn.waitFinished.Wait()
+		c <- struct{}{}
+	})
+	select {
+	case <-c:
+		//正常
+		return false
+	case <-time.After(timeout):
+		//超时
+		return true
+	}
 }

@@ -19,6 +19,13 @@ type ParseOperator struct {
 	ParseStrategy ParseStrategy
 }
 
+// NewParseOperator 创建一个新解析策略
+func NewParseOperator(strategy ParseStrategy) *ParseOperator {
+	return &ParseOperator{
+		ParseStrategy: strategy,
+	}
+}
+
 func (operator *ParseOperator) DoParseStrategy(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error {
 	return operator.ParseStrategy.Do(reader, lineBytes, ch)
 }

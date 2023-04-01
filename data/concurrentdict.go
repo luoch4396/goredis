@@ -17,7 +17,7 @@ type ConcurrentDict struct {
 	shardCount int
 }
 
-// 使用数据分片的方式和分段读写锁提高性能
+// 最简单的字典实现方案 参考java1.7 采用简单的分段锁
 type dictShard struct {
 	table         map[string]interface{}
 	readWriteLock sync.RWMutex
@@ -28,7 +28,7 @@ func NewConcurrentDict(shardCount int) *ConcurrentDict {
 	var table = make([]*dictShard, shardCount)
 	for i := 0; i < shardCount; i++ {
 		table[i] = &dictShard{
-			table: make(map[string]interface{}),
+			table: make(map[string]interface{}, 64),
 		}
 	}
 	var concurrentDict = &ConcurrentDict{

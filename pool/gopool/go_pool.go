@@ -11,17 +11,19 @@ var defaultPool Pool
 var poolMap sync.Map
 
 func init() {
-	defaultPool = NewPool("gopool.DefaultPool", 200, NewConfig())
+	defaultPool = NewPool("gopool.DefaultPool", 1000, NewConfig())
 }
 
 // Go is an alternative to the go keyword, which is able to recover panic.
-// gopool.Go(func(arg interface{}){
-//     ...
-// }(nil))
+//
+//	gopool.Go(func(arg interface{}){
+//	    ...
+//	}(nil))
 func Go(f func()) {
 	CtxGo(context.Background(), f)
 }
 
+// CtxGo context.Context 使用协程上下文
 // CtxGo is preferred than Go.
 func CtxGo(ctx context.Context, f func()) {
 	defaultPool.CtxGo(ctx, f)

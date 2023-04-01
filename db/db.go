@@ -14,13 +14,13 @@ const (
 
 // DB 定义redis的db
 type DB struct {
-	index      int
+	Index      int
 	data       _interface.Dict
 	ttlMap     _interface.Dict
 	versionMap _interface.Dict
 }
 
-func newDB() *DB {
+func NewDB() *DB {
 	db := &DB{
 		data:       data2.NewConcurrentDict(dataDictSize),
 		ttlMap:     data2.NewConcurrentDict(ttlDictSize),
