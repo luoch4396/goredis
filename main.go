@@ -34,7 +34,6 @@ func main() {
 		BuildLevel(configs.Log.LogLevel).
 		BuildFile(fs).
 		Build()
-	server.NewRedisDB()
 	//开启tcp服务
 	server.NewRedisServer(&server.Config{
 		Address: utils.NewStringBuilder(configs.Server.Address,
