@@ -2,13 +2,12 @@ package gopool
 
 import (
 	"context"
-	"fmt"
-	"sync"
 )
 
-var defaultPool Pool
-
-var poolMap sync.Map
+var (
+	//这里只实现一个pool，用于控制内部协程上限，目前是所有的，没有做pool缓存
+	defaultPool Pool
+)
 
 func init() {
 	defaultPool = NewPool("pool.DefaultPool", 1000, NewConfig())
@@ -42,25 +41,4 @@ func SetPanicHandler(f func(context.Context, interface{})) {
 // WorkerCount returns the number of global default base's running workers
 func WorkerCount() int32 {
 	return defaultPool.WorkerCount()
-}
-
-// RegisterPool registers a new base to the global map.
-// GetPool can be used to get the registered base by name.
-// returns error if the same name is registered.
-func RegisterPool(p Pool) error {
-	_, loaded := poolMap.LoadOrStore(p.Name(), p)
-	if loaded {
-		return fmt.Errorf("name: %s already registered", p.Name())
-	}
-	return nil
-}
-
-// GetPool gets the registered base by name.
-// Returns nil if not registered.
-func GetPool(name string) Pool {
-	p, ok := poolMap.Load(name)
-	if !ok {
-		return nil
-	}
-	return p.(Pool)
 }

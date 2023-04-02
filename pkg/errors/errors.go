@@ -64,7 +64,8 @@ func (r *StandardError) Info() []byte {
 
 func NewStandardError(status string) *StandardError {
 	return &StandardError{
-		Status: "ERR" + status,
+		//todo:不知道redis返回错误时候需要添加ERR前缀
+		Status: "ERR: " + status,
 	}
 }
 
