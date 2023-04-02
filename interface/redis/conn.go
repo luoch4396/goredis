@@ -8,4 +8,6 @@ type ClientConn interface {
 	Close() error
 	// Name 名称
 	Name() string
+	// GetDBIndex 选中的db
+	GetDBIndex() int
 }

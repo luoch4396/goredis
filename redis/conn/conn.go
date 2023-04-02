@@ -95,16 +95,22 @@ func (conn *ClientConn) Name() string {
 }
 
 // Close 关闭redis客户端连接
-func (conn *ClientConn) Close() {
-	//_ = conn.channel.Close()
+func (conn *ClientConn) Close() error {
+	//正常关闭客户端，并回收连接
+	conn.channel.Close(nil)
 	conn.password = ""
 	conn.selectedDB = 0
 	connPool.Put(conn)
+	return nil
+}
+
+func (conn *ClientConn) GetDBIndex() int {
+	return conn.selectedDB
 }
 
 func waitTimeout(conn *ClientConn, timeout time.Duration) bool {
 	c := make(chan struct{}, 1)
-	gopool.Go(func() {
+	gopool.CtxGo(nil, func() {
 		defer close(c)
 		conn.waitFinished.Wait()
 		c <- struct{}{}

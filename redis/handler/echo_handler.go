@@ -2,29 +2,24 @@ package handler
 
 import (
 	"github.com/go-netty/go-netty"
+	"goredis/pkg/errors"
+	"goredis/redis/config"
 	"sync/atomic"
 )
 
 type EchoHandler struct {
-	//role string
+	maxChan int32
 }
-
-var (
-	maxChan uint32 = 0
-)
 
 // HandleActive 开启连接
 func (l EchoHandler) HandleActive(ctx netty.ActiveContext) {
-	//TODO 控制连接上限，以及连接池管理？
-	atomic.AddUint32(&maxChan, 1)
-	//var channel = ctx.Channel()
-	//if !channel.IsActive() {
-	//	return
-	//}
+	atomic.AddInt32(&l.maxChan, 1)
+	if l.maxChan > int32(config.GetMaxConn()) {
+		ctx.Channel().Close(errors.NewStandardError("the number of connections more than max-conn"))
+	}
 }
 
 // HandleInactive 关闭连接
 func (l EchoHandler) HandleInactive(ctx netty.InactiveContext, ex netty.Exception) {
-	//fmt.Println(l.role, "->", "inactive:", ctx.Channel().RemoteAddr(), ex)
-	ctx.Channel().Close(ex)
+	atomic.AddInt32(&l.maxChan, -1)
 }

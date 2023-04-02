@@ -34,9 +34,9 @@ func getCurrentTime() int64 {
 }
 
 func (s *Snowflake) NextId() int64 {
+	now := getCurrentTime() // 转毫秒
 	s.Lock()
 	defer s.Unlock()
-	now := getCurrentTime() // 转毫秒
 	if s.timestamp == now {
 		// 当同一时间戳（精度：毫秒）下多次生成id会增加序列号
 		s.sequence = (s.sequence + 1) & sequenceMask

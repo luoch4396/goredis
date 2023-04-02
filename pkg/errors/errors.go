@@ -64,7 +64,7 @@ func (r *StandardError) Info() []byte {
 
 func NewStandardError(status string) *StandardError {
 	return &StandardError{
-		Status: status,
+		Status: "ERR" + status,
 	}
 }
 

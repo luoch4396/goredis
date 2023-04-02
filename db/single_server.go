@@ -1,11 +1,11 @@
 package db
 
 import (
+	"goredis/interface/redis"
 	"goredis/interface/tcp"
 	"goredis/pkg/errors"
 	"goredis/pkg/log"
 	"goredis/redis/config"
-	"goredis/redis/conn"
 	"strings"
 	"sync/atomic"
 )
@@ -43,7 +43,7 @@ func NewSingleServer() *SingleServer {
 	return singleServer
 }
 
-func (server *SingleServer) Exec(client *conn.ClientConn, cmdBytes [][]byte) (rep tcp.Info) {
+func (server *SingleServer) Exec(client redis.ClientConn, cmdBytes [][]byte) (rep tcp.Info) {
 	//TODO:错误恢复 移动至协程池？
 	//defer func() {
 	//	if err := recover(); err != nil {
@@ -54,29 +54,37 @@ func (server *SingleServer) Exec(client *conn.ClientConn, cmdBytes [][]byte) (re
 	cmdName := strings.ToLower(string(cmdBytes[0]))
 	switch cmdName {
 	case "ping":
-		return pingStrategy.DoCmdStrategy(client, cmdBytes[1:])
+		return pingStrategy.DoCmdStrategy(&client, cmdBytes[1:])
 	case "auth":
-		return authStrategy.DoCmdStrategy(client, cmdBytes[1:])
+		return authStrategy.DoCmdStrategy(&client, cmdBytes[1:])
 	case "info":
-		return infoStrategy.DoCmdStrategy(client, cmdBytes)
+		return infoStrategy.DoCmdStrategy(&client, cmdBytes)
 	}
-	if !isAuthenticated(client) {
+	if !isAuthenticated(&client) {
 		return errors.NewStandardError("NOAUTH Authentication required")
 	}
-	//dbIndex := client.GetDBIndex()
-	//selectedDB, errRep := server.selectDB(dbIndex)
-	//if errRep != nil {
-	//	return errReply
-	//}
-	//return selectedDB.Exec(client, cmdBytes)
+	dbIndex := client.GetDBIndex()
+	_, errRep := server.selectDB(dbIndex)
+	if errRep != nil {
+		return errRep
+	}
 	return nil
+	//selectedDB.Exec(client, cmdBytes)
 }
 
 func (server *SingleServer) Close() {
 
 }
 
-func isAuthenticated(client *conn.ClientConn) bool {
+func (server *SingleServer) selectDB(dbIndex int) (*DB, *errors.StandardError) {
+	//验证
+	if dbIndex >= len(server.dbs) || dbIndex < 0 {
+		return nil, errors.NewStandardError("DB index is out of range")
+	}
+	return server.dbs[dbIndex].Load().(*DB), nil
+}
+
+func isAuthenticated(client *redis.ClientConn) bool {
 	//if config.Properties.RequirePass == "" {
 	//	return true
 	//}

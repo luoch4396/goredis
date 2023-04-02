@@ -2,9 +2,9 @@ package redis
 
 import "goredis/interface/tcp"
 
-type DB interface {
+type Server interface {
 	// Exec 执行命令
-	Exec(client ClientConn, cmd [][]byte) tcp.Info
+	Exec(client ClientConn, cmd [][]byte) (rep tcp.Info)
 	// Close 关闭
 	Close()
 }

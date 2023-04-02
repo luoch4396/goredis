@@ -6,14 +6,17 @@ import (
 	"fmt"
 	"github.com/go-netty/go-netty"
 	"github.com/go-netty/go-netty/codec"
+	"goredis/interface/redis"
 	"goredis/interface/tcp"
 	"goredis/pkg/errors"
 	"goredis/pkg/log"
 	"goredis/pkg/pool/gopool"
+	"goredis/redis/conn"
 	"goredis/redis/exchange"
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var (
@@ -24,59 +27,64 @@ var (
 	unknownOperation = []byte("-ERR unknown\r\n")
 )
 
-func RedisCodec() codec.Codec {
-	return &codecHandler{}
+func NewRedisCodec(server redis.Server) codec.Codec {
+	return &codecHandler{
+		server: server,
+	}
 }
 
-type codecHandler struct{}
+type codecHandler struct {
+	activeConn sync.Map
+	server     redis.Server
+}
 
 func (*codecHandler) CodecName() string {
 	return "codec-handler"
 }
 
-func (*codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message) {
+func (c *codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message) {
 	var handleReadFunc = func() {
-		handleRead(ctx, message)
+		//包装连接对象
+		client := conn.NewClientConnBuilder().BuildChannel(ctx.Channel()).Build()
+		c.activeConn.Store(client, struct{}{})
+		//命令异步处理
+		ch := make(chan *tcp.Request)
+		var parseStreamingFunc = func() {
+			parseStreaming(message, ch)
+		}
+		gopool.Go(parseStreamingFunc)
+		//循环结果
+		for req := range ch {
+			if req.Error != nil {
+				if req.Error == io.EOF || req.Error == io.ErrUnexpectedEOF ||
+					strings.Contains(req.Error.Error(), "use closed network channel") {
+					log.Errorf("handle message with errors, channel will be closed: " + ctx.Channel().RemoteAddr())
+					ctx.Channel().Close(req.Error)
+					return
+				}
+				errRep := errors.NewStandardError(req.Error.Error())
+				ctx.Write(errRep.Info())
+				continue
+			}
+			if req.Data == nil {
+				log.Error("empty commands")
+				continue
+			}
+			r, ok := req.Data.(*exchange.MultiBulkRequest)
+			if !ok {
+				log.Error("error from multi bulk exchange")
+				continue
+			}
+			//处理解析后的命令
+			result := c.server.Exec(client, r.Args)
+			if result != nil {
+				ctx.Write(result.Info())
+			} else {
+				ctx.Write(unknownOperation)
+			}
+		}
 	}
 	gopool.Go(handleReadFunc)
-}
-
-func handleRead(ctx netty.InboundContext, message netty.Message) {
-	ch := make(chan *tcp.Request)
-	var parseStreamingFunc = func() {
-		parseStreaming(message, ch)
-	}
-	gopool.Go(parseStreamingFunc)
-	//循环结果
-	for req := range ch {
-		if req.Error != nil {
-			if req.Error == io.EOF || req.Error == io.ErrUnexpectedEOF ||
-				strings.Contains(req.Error.Error(), "use a closed network channel") {
-				log.Errorf("handle message with errors, channel will be closed: " + ctx.Channel().RemoteAddr())
-				ctx.Channel().Close(req.Error)
-				return
-			}
-			errRep := errors.NewStandardError(req.Error.Error())
-			ctx.Write(errRep.Info())
-			continue
-		}
-		if req.Data == nil {
-			log.Error("empty commands")
-			continue
-		}
-		_, ok := req.Data.(*exchange.MultiBulkRequest)
-		if !ok {
-			log.Error("error from multi bulk exchange")
-			continue
-		}
-		//命令处理
-		//result := h.db.Exec(message, r.Args)
-		//if result != nil {
-		//	ctx.Write(result.ToBytes())
-		//} else {
-		//	ctx.Write(unknownOperation)
-		//}
-	}
 }
 
 func (*codecHandler) HandleWrite(ctx netty.OutboundContext, message netty.Message) {

@@ -39,5 +39,5 @@ func main() {
 	server.NewRedisServer(&server.Config{
 		Address: utils.NewStringBuilder(configs.Server.Address,
 			":", strconv.FormatInt(int64(configs.Server.Port), 10)),
-	})
+	}, server.NewRedisDB())
 }
