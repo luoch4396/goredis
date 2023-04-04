@@ -14,7 +14,7 @@ type MixedPool struct {
 	call             func(f func())
 }
 
-func (mp *MixedPool) callWithRecover(f func()) {
+func (mp *MixedPool) call0(f func()) {
 	defer func() {
 		if err := recover(); err != nil {
 			if mp.panicHandler != nil {
@@ -74,6 +74,6 @@ func NewMixedPool(totalParallelism int, fixedSize int, bufferSize int) *MixedPoo
 		FixedNoOrderPool: NewFixedNoOrderPool(fixedSize, bufferSize),
 		totalParallelism: int32(totalParallelism),
 	}
-	mp.call = mp.callWithRecover
+	mp.call = mp.call0
 	return mp
 }
