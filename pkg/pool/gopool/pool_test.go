@@ -38,9 +38,7 @@ func BenchmarkFixedPoolGo(b *testing.B) {
 		wg.Add(testLoopNum)
 		for j := 0; j < testLoopNum; j++ {
 			p.Go(func() {
-				if sleepTime > 0 {
-					time.Sleep(sleepTime)
-				}
+				time.Sleep(sleepTime)
 				wg.Done()
 			})
 		}
@@ -90,26 +88,6 @@ func BenchmarkFixedNoOrderPool(b *testing.B) {
 
 func BenchmarkMixedPool(b *testing.B) {
 	p := NewMixedPool(32, 4, 1024)
-	defer p.Stop()
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		wg := sync.WaitGroup{}
-		wg.Add(testLoopNum)
-		for j := 0; j < testLoopNum; j++ {
-			p.Go(func() {
-				time.Sleep(sleepTime)
-				wg.Done()
-			})
-		}
-		wg.Wait()
-	}
-}
-
-func BenchmarkTaskPool(b *testing.B) {
-	p := New(32, time.Second*10)
 	defer p.Stop()
 
 	b.ReportAllocs()

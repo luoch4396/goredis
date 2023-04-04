@@ -18,10 +18,11 @@ func BenchmarkSpinDictPutByPool(b *testing.B) {
 		a: "1",
 		b: "2",
 	}
+	p := gopool.NewMixedPool(32, 4, 1024)
 	dict := NewSpinDict(16)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		gopool.Go(func() {
+		p.Go(func() {
 			dict.Put("1", test2)
 		})
 	}
@@ -41,9 +42,10 @@ func BenchmarkSpinDictPut(b *testing.B) {
 
 func BenchmarkSpinDictGetByPool(b *testing.B) {
 	dict := NewSpinDict(16)
+	p := gopool.NewMixedPool(32, 4, 1024)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		gopool.Go(func() {
+		p.Go(func() {
 			dict.Get("1")
 		})
 	}

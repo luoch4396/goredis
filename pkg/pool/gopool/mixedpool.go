@@ -53,11 +53,6 @@ func (mp *MixedPool) Go(f func()) {
 	}
 }
 
-// GoByIndex .
-func (mp *MixedPool) GoByIndex(index int, f func()) {
-	mp.Go(f)
-}
-
 // Stop .
 func (mp *MixedPool) Stop() {
 	close(mp.chTask)
