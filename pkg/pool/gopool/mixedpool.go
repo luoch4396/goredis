@@ -7,8 +7,6 @@ import (
 	"unsafe"
 )
 
-var cpus = runtime.NumCPU()
-
 // MixedPool .
 type MixedPool struct {
 	*FixedNoOrderPool
@@ -61,7 +59,12 @@ func (mp *MixedPool) Stop() {
 	close(mp.chTask)
 }
 
-var goPool = NewMixedPool(32, 4, 1024)
+var goPool *MixedPool
+var cpus = runtime.NumCPU()
+
+func init() {
+	goPool = NewMixedPool(32, 4, 1024)
+}
 
 func Go(f func()) {
 	goPool.Go(f)
