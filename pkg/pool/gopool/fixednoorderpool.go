@@ -2,7 +2,8 @@ package gopool
 
 // FixedNoOrderPool .
 type FixedNoOrderPool struct {
-	chTask chan func()
+	chTask       chan func()
+	panicHandler func(interface{})
 }
 
 func (np *FixedNoOrderPool) taskLoop() {
@@ -24,6 +25,10 @@ func (np *FixedNoOrderPool) GoByIndex(index int, f func()) {
 // Stop .
 func (np *FixedNoOrderPool) Stop() {
 	close(np.chTask)
+}
+
+func (np *FixedNoOrderPool) SetPanicHandler(f func(interface{})) {
+	np.panicHandler = f
 }
 
 // NewFixedNoOrderPool .
