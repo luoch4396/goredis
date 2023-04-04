@@ -1,5 +1,11 @@
 package gopool
 
+import (
+	"goredis/pkg/log"
+	"runtime"
+	"unsafe"
+)
+
 // FixedNoOrderPool .
 type FixedNoOrderPool struct {
 	chTask       chan func()
@@ -10,6 +16,18 @@ func (np *FixedNoOrderPool) taskLoop() {
 	for f := range np.chTask {
 		call(f)
 	}
+}
+
+func call(f func()) {
+	defer func() {
+		if err := recover(); err != nil {
+			const size = 64 << 10
+			buf := make([]byte, size)
+			buf = buf[:runtime.Stack(buf, false)]
+			log.Errorf("taskpool call failed: %v\n%v\n", err, *(*string)(unsafe.Pointer(&buf)))
+		}
+	}()
+	f()
 }
 
 // Go .
