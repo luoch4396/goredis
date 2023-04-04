@@ -61,6 +61,12 @@ func (mp *MixedPool) Stop() {
 	close(mp.chTask)
 }
 
+var goPool = NewMixedPool(32, 4, 1024)
+
+func Go(f func()) {
+	goPool.Go(f)
+}
+
 // NewMixedPool .
 func NewMixedPool(totalParallelism int, fixedSize int, bufferSize int) *MixedPool {
 	if totalParallelism <= 1 {
