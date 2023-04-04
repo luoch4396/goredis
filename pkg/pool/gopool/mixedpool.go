@@ -17,9 +17,11 @@ type MixedPool struct {
 func (mp *MixedPool) call0(f func()) {
 	defer func() {
 		if err := recover(); err != nil {
+			//自定义panicHandler
 			if mp.panicHandler != nil {
 				mp.panicHandler(err)
 			} else {
+				//default panicHandler
 				const size = 64 << 10
 				buf := make([]byte, size)
 				buf = buf[:runtime.Stack(buf, false)]
@@ -33,9 +35,12 @@ func (mp *MixedPool) call0(f func()) {
 }
 
 func (mp *MixedPool) Go(f func()) {
+	//并行度判断
 	if atomic.AddInt32(&mp.parallelism, 1) <= mp.totalParallelism {
 		go func() {
+			//执行任务
 			mp.call(f)
+			//执行任务队列里的任务
 			for len(mp.chTask) > 0 {
 				select {
 				case f = <-mp.chTask:
@@ -47,6 +52,7 @@ func (mp *MixedPool) Go(f func()) {
 		}()
 	} else {
 		atomic.AddInt32(&mp.parallelism, -1)
+		//返还任务队列
 		mp.FixedNoOrderPool.Go(f)
 	}
 }
