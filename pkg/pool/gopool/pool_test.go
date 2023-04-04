@@ -26,46 +26,6 @@ func BenchmarkGo(b *testing.B) {
 	}
 }
 
-func BenchmarkFixedPoolGo(b *testing.B) {
-	p := NewFixedPool(32, 512)
-	defer p.Stop()
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		wg := sync.WaitGroup{}
-		wg.Add(testLoopNum)
-		for j := 0; j < testLoopNum; j++ {
-			p.Go(func() {
-				time.Sleep(sleepTime)
-				wg.Done()
-			})
-		}
-		wg.Wait()
-	}
-}
-
-func BenchmarkFixedPoolGoByIndex(b *testing.B) {
-	p := NewFixedPool(32, 512)
-	defer p.Stop()
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		wg := sync.WaitGroup{}
-		wg.Add(testLoopNum)
-		for j := 0; j < testLoopNum; j++ {
-			p.GoByIndex(j, func() {
-				time.Sleep(sleepTime)
-				wg.Done()
-			})
-		}
-		wg.Wait()
-	}
-}
-
 func BenchmarkFixedNoOrderPool(b *testing.B) {
 	p := NewFixedNoOrderPool(32, 1024)
 	defer p.Stop()
