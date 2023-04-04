@@ -7,13 +7,11 @@ import (
 	"unsafe"
 )
 
-// MixedPool .
 type MixedPool struct {
 	*FixedNoOrderPool
 	parallelism      int32
 	totalParallelism int32
 	call             func(f func())
-	panicHandler     func(interface{})
 }
 
 func (mp *MixedPool) callWithRecover(f func()) {
@@ -34,7 +32,6 @@ func (mp *MixedPool) callWithRecover(f func()) {
 	f()
 }
 
-// Go .
 func (mp *MixedPool) Go(f func()) {
 	if atomic.AddInt32(&mp.parallelism, 1) <= mp.totalParallelism {
 		go func() {
@@ -54,7 +51,6 @@ func (mp *MixedPool) Go(f func()) {
 	}
 }
 
-// Stop .
 func (mp *MixedPool) Stop() {
 	close(mp.chTask)
 }
@@ -70,7 +66,6 @@ func Go(f func()) {
 	goPool.Go(f)
 }
 
-// NewMixedPool .
 func NewMixedPool(totalParallelism int, fixedSize int, bufferSize int) *MixedPool {
 	if totalParallelism <= 1 {
 		totalParallelism = cpus
