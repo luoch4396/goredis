@@ -110,7 +110,7 @@ func (conn *ClientConn) GetDBIndex() int {
 
 func waitTimeout(conn *ClientConn, timeout time.Duration) bool {
 	c := make(chan struct{}, 1)
-	gopool.CtxGo(nil, func() {
+	gopool.Go(nil, func() {
 		defer close(c)
 		conn.waitFinished.Wait()
 		c <- struct{}{}

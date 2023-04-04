@@ -1,7 +1,7 @@
 package data
 
 import (
-	"goredis/pkg/pool/gopool"
+	"sync"
 	"testing"
 )
 
@@ -13,56 +13,25 @@ type test1 struct {
 	e interface{}
 }
 
-func BenchmarkConcurrentDictPutByPool(b *testing.B) {
-	test1 := test1{
-		a: "1",
-		b: "2",
-	}
-	dict := NewConcurrentDict(16)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		gopool.Go(func() {
-			dict.Put("1", test1)
-		})
-	}
-}
-
-func BenchmarkConcurrentDictPut(b *testing.B) {
-	test1 := test1{
-		a: "1",
-		b: "2",
-	}
-	dict := NewConcurrentDict(16)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		go dict.Put("1", test1)
-	}
-}
-
-func BenchmarkConcurrentDictGetByPool(b *testing.B) {
-	dict := NewConcurrentDict(16)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		gopool.Go(func() {
-			dict.Get("1")
-			dict.Put("1", "1")
-			dict.Get("1")
-			dict.Put("2", "1")
-			dict.Get("2")
-		})
-	}
-}
+var BenchTimes = 10000
 
 func BenchmarkConcurrentDictGet(b *testing.B) {
 	dict := NewConcurrentDict(16)
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		go func() {
-			dict.Get("1")
-			dict.Put("1", "1")
-			dict.Get("1")
-			dict.Put("2", "1")
-			dict.Get("2")
-		}()
+		wg := sync.WaitGroup{}
+		wg.Add(BenchTimes)
+		for j := 0; j < BenchTimes; j++ {
+			go func() {
+				dict.Get("1")
+				dict.Put("1", "1")
+				dict.Get("1")
+				dict.Put("2", "1")
+				dict.Get("2")
+				wg.Done()
+			}()
+		}
+		wg.Wait()
 	}
 }
