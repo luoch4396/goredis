@@ -11,13 +11,13 @@ type Config struct {
 		FileName string `yaml:"file-name"`
 		FilePath string `yaml:"file-path"`
 		LogLevel string `yaml:"log-level"`
-		Password string `yaml:"password"`
 	}
 	Server struct {
 		Address   string `yaml:"address"`
 		Port      int    `yaml:"port"`
 		MaxConn   int    `yaml:"max-conn"`
 		Databases int    `yaml:"databases"`
+		Password  string `yaml:"password"`
 	}
 	Pools []Pool `yaml:"pools"`
 }
@@ -46,4 +46,8 @@ func NewConfig(globalConfigFileName string) {
 
 func GetMaxConn() int {
 	return Configs.Server.MaxConn
+}
+
+func GetPassword() string {
+	return Configs.Server.Password
 }

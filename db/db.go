@@ -3,6 +3,8 @@ package db
 import (
 	data2 "goredis/data"
 	"goredis/data/interface"
+	"goredis/interface/redis"
+	"goredis/interface/tcp"
 )
 
 const (
@@ -28,4 +30,8 @@ func NewDB() *DB {
 		//locker:     lock.NewLocker(lockerSize),
 	}
 	return db
+}
+
+func (db *DB) Exec(c redis.ClientConn, cmdLine [][]byte) *tcp.Response {
+	return &tcp.Response{}
 }

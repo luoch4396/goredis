@@ -25,7 +25,7 @@ func (mp *MixedPool) call0(f func()) {
 				const size = 64 << 10
 				buf := make([]byte, size)
 				buf = buf[:runtime.Stack(buf, false)]
-				log.Errorf("taskpool call failed: %v\n%v\n", err, *(*string)(unsafe.Pointer(&buf)))
+				log.Errorf("gopool call failed: %v\n%v\n", err, *(*string)(unsafe.Pointer(&buf)))
 			}
 		}
 		atomic.AddInt32(&mp.parallelism, -1)

@@ -11,5 +11,5 @@ package pkg
 //|-- nio -> the non-blocking io framework based on epoll(linux) or kqueue(mac) by event driven, and windows debugging only
 //|-- pool -> some pools implementation
 //|   |-- bytepool -> a non-copy bytes pool
-//|   |-- gopool -> go coprocessors pool implementation based on gopool and expand it
+//|   |-- gopool -> go coprocessors pool implement by chan
 //|-- utils -> some tools

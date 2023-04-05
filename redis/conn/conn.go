@@ -108,6 +108,10 @@ func (conn *ClientConn) GetDBIndex() int {
 	return conn.selectedDB
 }
 
+func (conn *ClientConn) SetPassword(password string) {
+	conn.password = password
+}
+
 func waitTimeout(conn *ClientConn, timeout time.Duration) bool {
 	c := make(chan struct{}, 1)
 	gopool.Go(func() {

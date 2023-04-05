@@ -10,4 +10,6 @@ type ClientConn interface {
 	Name() string
 	// GetDBIndex 选中的db
 	GetDBIndex() int
+
+	SetPassword(password string)
 }
