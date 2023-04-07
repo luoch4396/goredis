@@ -74,7 +74,7 @@ func Go(f func()) {
 
 func NewMixedPool(totalParallelism int, fixedSize int, bufferSize int) *MixedPool {
 	if totalParallelism <= 1 {
-		totalParallelism = cpus
+		totalParallelism = cpus * 2
 	}
 	mp := &MixedPool{
 		FixedNoOrderPool: NewFixedNoOrderPool(fixedSize, bufferSize),
