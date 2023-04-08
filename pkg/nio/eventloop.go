@@ -6,6 +6,6 @@ type EventLoop interface {
 type eventLoop struct {
 }
 
-func NewNioEventLoop() {
+func NewEventLoop() {
 
 }

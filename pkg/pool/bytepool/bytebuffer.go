@@ -1,4 +1,4 @@
-package btyepool
+package bytepool
 
 import "sync"
 
@@ -23,7 +23,12 @@ type ByteBuffer struct {
 	cap        int64
 }
 
-var Default = NewByteBuffer(1024, 1024*32)
+var Default ByteBuffer
+
+// 默认的ByteBuffer
+func init() {
+	NewByteBuffer(1024, 1024*32)
+}
 
 func NewByteBuffer(bufferSize, freeSize int) Allocator {
 	if bufferSize <= 0 {
@@ -130,8 +135,4 @@ func DefaultWriteString(buf []byte, more string) []byte {
 
 func DefaultFree(buf []byte) {
 	Default.Free(buf)
-}
-
-func DefaultInit(bufSize, freeSize int) {
-	Default = NewByteBuffer(bufSize, freeSize)
 }
