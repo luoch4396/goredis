@@ -8,8 +8,8 @@ goredis 是一个Go语言实现的且基于NIO的Redis服务器。
 - 支持string
 
 #性能测试:
+win:
 mac:
-
 linux:
 
 # 目录结构
