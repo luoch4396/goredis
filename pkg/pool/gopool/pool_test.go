@@ -20,7 +20,7 @@ func BenchmarkGo(b *testing.B) {
 			go call(func() {
 				time.Sleep(sleepTime)
 				wg.Done()
-			})
+			}, nil)
 		}
 		wg.Wait()
 	}

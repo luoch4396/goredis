@@ -74,6 +74,7 @@ func Go(f func()) {
 
 func NewMixedPool(totalParallelism int, fixedSize int, bufferSize int) *MixedPool {
 	if totalParallelism <= 1 {
+		//io 密集型默认处理个数
 		totalParallelism = cpus * 2
 	}
 	mp := &MixedPool{

@@ -122,6 +122,10 @@ func (dl *Logger) Fatal(message string, v ...interface{}) {
 	dl.basePrintLog(FATAL, &message, v...)
 }
 
+func (dl *Logger) DebugEnabled() bool {
+	return dl.level == DEBUG
+}
+
 func (dl *Logger) basePrintLog(logLevel Level, message *string, v ...interface{}) {
 	if dl.level > logLevel {
 		return
