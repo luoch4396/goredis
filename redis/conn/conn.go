@@ -112,6 +112,10 @@ func (conn *ClientConn) SetPassword(password string) {
 	conn.password = password
 }
 
+func (conn *ClientConn) GetPassword() string {
+	return conn.password
+}
+
 func waitTimeout(conn *ClientConn, timeout time.Duration) bool {
 	c := make(chan struct{}, 1)
 	gopool.Go(func() {

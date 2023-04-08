@@ -12,4 +12,6 @@ type ClientConn interface {
 	GetDBIndex() int
 
 	SetPassword(password string)
+
+	GetPassword() string
 }

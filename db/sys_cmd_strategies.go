@@ -48,15 +48,17 @@ func (*AuthStrategy) Do(conn redis.ClientConn, args [][]byte) tcp.Info {
 	if len(args) != 1 {
 		return errors.NewStandardError("Wrong number of arguments for 'auth' command")
 	}
+	ok := &exchange.OkResponse{}
 	if config.GetPassword() == "" {
-		return errors.NewStandardError("Client send AUTH, but server config-password is null")
+		//服务端无密码，不予认证
+		return ok
 	}
 	passwd := string(args[0])
 	conn.SetPassword(passwd)
 	if config.GetPassword() != passwd {
 		return errors.NewStandardError("invalid password")
 	}
-	return &exchange.OkResponse{}
+	return ok
 }
 
 // InfoStrategy redis服务信息策略
@@ -64,4 +66,9 @@ type InfoStrategy struct{}
 
 func (*InfoStrategy) Do(conn redis.ClientConn, args [][]byte) tcp.Info {
 	return nil
+}
+
+// GetCustomizeRedisInfo 返回redis service 信息
+func GetCustomizeRedisInfo() {
+
 }
