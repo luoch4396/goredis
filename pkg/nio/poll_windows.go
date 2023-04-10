@@ -4,10 +4,10 @@ package nio
 
 import "net"
 
-type pollWin struct {
+type poll struct {
 	listener net.Listener
 }
 
-func (p *pollWin) accept() error {
+func (p *poll) accept() error {
 	return nil
 }

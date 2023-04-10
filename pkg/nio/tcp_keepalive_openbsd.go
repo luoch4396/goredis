@@ -10,9 +10,9 @@ func SetKeepAlive(flag bool, fd, sec int) error {
 		}
 		return nil
 	}
+	//只设置开启
 	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_KEEPALIVE, 1); err != nil {
 		return err
 	}
-	//不知道这个系统为什么有KEEPALIVE，但是没有时间设置？
 	return nil
 }

@@ -14,7 +14,7 @@ func SetKeepAlive(flag bool, fd, sec int) error {
 	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_KEEPALIVE, 1); err != nil {
 		return err
 	}
-	//低版本 osx 不支持开启TCP_KEEPALIVE 返回错误
+	//不支持开启TCP_KEEPALIVE
 	switch err := syscall.SetsockoptInt(fd, syscall.IPPROTO_TCP, 0x101, sec); err {
 	case nil, syscall.ENOPROTOOPT:
 	default:
