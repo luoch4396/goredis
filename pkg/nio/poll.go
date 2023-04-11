@@ -1,5 +1,5 @@
 package nio
 
-type poll interface {
-	accept() error
-}
+//type poll interface {
+//	accept() error
+//}
