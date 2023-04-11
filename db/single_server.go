@@ -8,6 +8,7 @@ import (
 	"goredis/redis/config"
 	"strings"
 	"sync/atomic"
+	"time"
 )
 
 var (
@@ -18,6 +19,7 @@ var (
 )
 
 type SingleServer struct {
+	*Server
 	//db数组
 	dbs []*atomic.Value
 	//角色（主、从）
@@ -27,10 +29,9 @@ type SingleServer struct {
 // NewSingleServer 创建一个简单的单机redis服务
 func NewSingleServer() *SingleServer {
 	var singleServer = &SingleServer{}
-	configs := &config.Configs
-	if configs.Server.Databases == 0 {
+	if config.GetDatabases() == 0 {
 		//redis 默认16个数据库
-		configs.Server.Databases = 16
+		config.SetDatabases(16)
 	}
 	for i := range singleServer.dbs {
 		var singleDB = NewDB()
@@ -39,6 +40,12 @@ func NewSingleServer() *SingleServer {
 		oneDb.Store(singleDB)
 		singleServer.dbs[i] = oneDb
 	}
+	serverType := "single"
+	singleServer.serverType = serverType
+	if config.GetServerType() == "" {
+		config.SetServerType(serverType)
+	}
+	singleServer.StartUpTime = time.Now()
 	log.Info("create default 16 databases success!")
 	return singleServer
 }

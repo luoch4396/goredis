@@ -5,6 +5,11 @@ import (
 	"os"
 )
 
+var (
+	SingleServer = "single"
+	//ClusterMode  = "cluster"
+)
+
 // Config 定义redis 配置
 type Config struct {
 	Log struct {
@@ -13,11 +18,12 @@ type Config struct {
 		LogLevel string `yaml:"log-level"`
 	}
 	Server struct {
-		Address   string `yaml:"address"`
-		Port      int    `yaml:"port"`
-		MaxConn   int    `yaml:"max-conn"`
-		Databases int    `yaml:"databases"`
-		Password  string `yaml:"password"`
+		Address    string `yaml:"address"`
+		Port       int    `yaml:"port"`
+		MaxConn    int    `yaml:"max-conn"`
+		Databases  int    `yaml:"databases"`
+		Password   string `yaml:"password"`
+		ServerType string `yaml:"Server-type"`
 	}
 	Pools []Pool `yaml:"pools"`
 }
@@ -44,8 +50,24 @@ func NewConfig(globalConfigFileName string) {
 	}
 }
 
+func GetDatabases() int {
+	return Configs.Server.Databases
+}
+
+func SetDatabases(databases int) {
+	Configs.Server.Databases = databases
+}
+
 func GetMaxConn() int {
 	return Configs.Server.MaxConn
+}
+
+func GetServerType() string {
+	return Configs.Server.ServerType
+}
+
+func SetServerType(serverType string) {
+	Configs.Server.ServerType = serverType
 }
 
 func GetPassword() string {
