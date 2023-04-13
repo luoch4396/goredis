@@ -7,8 +7,7 @@ import (
 )
 
 const (
-	Version    = "1.0.1"
-	Go_version = "1.1.18"
+	Version = "1.0.1"
 )
 
 // Config 定义redis 配置

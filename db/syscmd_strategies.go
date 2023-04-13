@@ -98,8 +98,9 @@ func GetCustomizeRedisInfo(redisType string) []byte {
 	switch redisType {
 	case "server":
 		s := fmt.Sprintf("# Server\r\n"+
-			"goredis_version:%s\r\n"+
-			"goredis_mode:%s\r\n"+
+			//这条不能变
+			"redis_version:%s\r\n"+
+			"redis_mode:%s\r\n"+
 			"os:%s %s\r\n"+
 			"arch_bits:%d\r\n"+
 			"go_version:%s\r\n"+
