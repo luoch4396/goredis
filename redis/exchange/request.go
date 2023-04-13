@@ -2,30 +2,8 @@ package exchange
 
 import (
 	"bytes"
-	"goredis/pkg/utils"
 	"strconv"
 )
-
-// BulkRequest 二进制指令
-type BulkRequest struct {
-	Arg []byte
-}
-
-func NewBulkRequest(arg []byte) *BulkRequest {
-	return &BulkRequest{
-		Arg: arg,
-	}
-}
-
-func (r *BulkRequest) Info() []byte {
-	if r.Arg == nil {
-		return nullBulkBytes
-	}
-	//for example:
-	//$(命令长度)
-	//命令具体参数：QUIT
-	return []byte(utils.NewStringBuilder("$", strconv.Itoa(len(r.Arg)), CRLF, string(r.Arg), CRLF))
-}
 
 // MultiBulkRequest 多行二进制指令
 type MultiBulkRequest struct {

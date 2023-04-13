@@ -27,7 +27,6 @@ func NewRedisServer(config *Config, server redis.Server) {
 	var childInitializer = func(channel netty.Channel) {
 		channel.Pipeline().
 			AddLast(handler.EchoHandler{}).
-			AddLast(handler.ExceptionHandler{}).
 			AddLast(handler.NewRedisCodec(server))
 	}
 	//TODO 需要控制TCP连接数

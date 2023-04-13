@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/go-netty/go-netty"
+	"goredis/pkg/errors"
 	"goredis/pkg/log"
 )
 
@@ -11,7 +12,6 @@ type ExceptionHandler struct {
 
 func (l EchoHandler) HandleException(ctx netty.ExceptionContext, ex netty.Exception) {
 	log.Errorf("", ex)
-
-	//TODO: 所有异常都走到这里？
+	ctx.Channel().Write(errors.NewStandardError(ex.Error()))
 	ctx.Channel().Close(ex)
 }

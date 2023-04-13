@@ -49,7 +49,7 @@ func (*BulkStringsStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<-
 		return err
 	}
 	ch <- &tcp.Request{
-		Data: exchange.NewBulkRequest(body[:len(body)-2]),
+		Data: exchange.NewBulkInfo(body[:len(body)-2]),
 	}
 	return nil
 }

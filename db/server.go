@@ -4,6 +4,6 @@ import "time"
 
 type Server struct {
 	//
-	serverType  string
+	ServerType  string
 	StartUpTime time.Time
 }

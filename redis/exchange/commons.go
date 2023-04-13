@@ -1,5 +1,10 @@
 package exchange
 
+import (
+	"goredis/pkg/utils"
+	"strconv"
+)
+
 var (
 	nullBulkBytes       = []byte("$-1\r\n")
 	CRLF                = "\r\n"
@@ -19,4 +24,25 @@ func NewStatusInfo(status string) *StatusInfo {
 
 func (r *StatusInfo) Info() []byte {
 	return []byte("+" + r.Status + CRLF)
+}
+
+// BulkInfo 二进制指令
+type BulkInfo struct {
+	Arg []byte
+}
+
+func NewBulkInfo(arg []byte) *BulkInfo {
+	return &BulkInfo{
+		Arg: arg,
+	}
+}
+
+func (r *BulkInfo) Info() []byte {
+	if r.Arg == nil {
+		return nullBulkBytes
+	}
+	//for example:
+	//$(命令长度)
+	//命令具体参数：QUIT
+	return []byte(utils.NewStringBuilder("$", strconv.Itoa(len(r.Arg)), CRLF, string(r.Arg), CRLF))
 }

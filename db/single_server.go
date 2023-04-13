@@ -40,12 +40,10 @@ func NewSingleServer() *SingleServer {
 		oneDb.Store(singleDB)
 		singleServer.dbs[i] = oneDb
 	}
-	serverType := "single"
-	singleServer.serverType = serverType
 	if config.GetServerType() == "" {
-		config.SetServerType(serverType)
+		config.SetServerType("single")
 	}
-	singleServer.StartUpTime = time.Now()
+	config.SetStartUpTime(time.Now())
 	log.Info("create default 16 databases success!")
 	return singleServer
 }

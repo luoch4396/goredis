@@ -1,12 +1,16 @@
 package db
 
 import (
+	"fmt"
 	"goredis/interface/redis"
 	"goredis/interface/tcp"
 	"goredis/pkg/errors"
 	"goredis/redis/config"
 	"goredis/redis/exchange"
+	"os"
+	"runtime"
 	"strings"
+	"time"
 )
 
 // CmdStrategy 命令解析策略接口
@@ -72,15 +76,15 @@ func (*InfoStrategy) Do(_ redis.ClientConn, args [][]byte) tcp.Info {
 		for _, s := range infoCommandList {
 			allSection = append(allSection, GetCustomizeRedisInfo(s)...)
 		}
-		return exchange.NewBulkRequest(allSection)
+		return exchange.NewBulkInfo(allSection)
 	} else if len(args) == 2 {
 		section := strings.ToLower(string(args[1]))
 		switch section {
 		case "server":
-			reply := GetCustomizeRedisInfo("server")
-			return exchange.NewBulkRequest(reply)
+			rep := GetCustomizeRedisInfo("server")
+			return exchange.NewBulkInfo(rep)
 		case "client":
-			return exchange.NewBulkRequest(GetCustomizeRedisInfo("client"))
+			return exchange.NewBulkInfo(GetCustomizeRedisInfo("client"))
 		default:
 			return exchange.NewNullBulkRequest()
 		}
@@ -89,11 +93,41 @@ func (*InfoStrategy) Do(_ redis.ClientConn, args [][]byte) tcp.Info {
 }
 
 // GetCustomizeRedisInfo 返回redis service 信息
-func GetCustomizeRedisInfo(str string) []byte {
-	return nil
-}
+func GetCustomizeRedisInfo(redisType string) []byte {
+	startUpTime := time.Since(config.GetStartUpTime()) / time.Second
+	switch redisType {
+	case "server":
+		s := fmt.Sprintf("# Server\r\n"+
+			"goredis_version:%s\r\n"+
+			"goredis_mode:%s\r\n"+
+			"os:%s %s\r\n"+
+			"arch_bits:%d\r\n"+
+			"go_version:%s\r\n"+
+			"process_id:%d\r\n"+
+			"redis_port:%d\r\n"+
+			"uptime_in_seconds:%d\r\n"+
+			"uptime_in_days:%d\r\n",
+			config.Version,
+			config.GetServerType(),
+			runtime.GOOS, runtime.GOARCH,
+			32<<(^uint(0)>>63),
+			runtime.Version(),
+			os.Getpid(),
+			config.GetPort(),
+			startUpTime,
+			startUpTime/time.Duration(3600*24))
+		return []byte(s)
+	case "client":
+		s := fmt.Sprintf("# Clients\r\n"+
+			"connected_clients:%d\r\n",
+			//TODO 连接数
+			1,
+			//1,
+			//2,
+			//3,
+		)
+		return []byte(s)
+	}
 
-// getGodisRunningTime return the running time of godis
-//func getRedisRunningTime() time.Duration {
-//	return time.Since(config.EachTimeServerInfo.StartUpTime) / time.Second
-//}
+	return []byte("")
+}
