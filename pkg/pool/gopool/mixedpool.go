@@ -4,7 +4,6 @@ import (
 	"goredis/pkg/log"
 	"runtime"
 	"sync/atomic"
-	"unsafe"
 )
 
 type MixedPool struct {
@@ -21,11 +20,7 @@ func (mp *MixedPool) call0(f func()) {
 			if mp.panicHandler != nil {
 				mp.panicHandler(err)
 			} else {
-				//default panicHandler
-				const size = 64 << 10
-				buf := make([]byte, size)
-				buf = buf[:runtime.Stack(buf, false)]
-				log.Errorf("gopool call failed: %v\n%v\n", err, *(*string)(unsafe.Pointer(&buf)))
+				log.MakeErrorLog(err)
 			}
 		}
 		atomic.AddInt32(&mp.parallelism, -1)

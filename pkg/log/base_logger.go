@@ -3,6 +3,8 @@ package log
 import (
 	"io"
 	"log"
+	"runtime"
+	"unsafe"
 )
 
 // FormatterLogger 日志模块定义
@@ -53,4 +55,11 @@ type Builder interface {
 
 type LoggerBuilder struct {
 	logger Logger
+}
+
+// MakeErrorLog 打印错误堆栈
+func MakeErrorLog(err any) {
+	buf := make([]byte, 32<<10)
+	buf = buf[:runtime.Stack(buf, false)]
+	Errorf("error occurs: %v\n%s", err, *(*string)(unsafe.Pointer(&buf)))
 }

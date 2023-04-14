@@ -3,7 +3,8 @@ server:
   address: 127.0.0.1
   port: 6379
   max-conn: 80000
-  password: a#j8/.sd2fcc
+  # password: a#j8/.sd2fcc
+  password: 
 
 # log configs
 log:

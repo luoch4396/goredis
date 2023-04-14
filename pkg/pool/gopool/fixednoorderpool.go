@@ -2,8 +2,6 @@ package gopool
 
 import (
 	"goredis/pkg/log"
-	"runtime"
-	"unsafe"
 )
 
 type FixedNoOrderPool struct {
@@ -23,10 +21,7 @@ func call(f func(), panicHandler func(interface{})) {
 			if panicHandler != nil {
 				panicHandler(err)
 			} else {
-				const size = 64 << 10
-				buf := make([]byte, size)
-				buf = buf[:runtime.Stack(buf, false)]
-				log.Errorf("taskpool call failed: %v\n%v\n", err, *(*string)(unsafe.Pointer(&buf)))
+				log.MakeErrorLog(err)
 			}
 
 		}

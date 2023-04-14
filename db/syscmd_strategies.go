@@ -80,11 +80,17 @@ func (*InfoStrategy) Do(_ redis.ClientConn, args [][]byte) tcp.Info {
 	} else if len(args) == 2 {
 		section := strings.ToLower(string(args[1]))
 		switch section {
+		//服务器信息
 		case "server":
-			rep := GetCustomizeRedisInfo("server")
-			return exchange.NewBulkInfo(rep)
+			return exchange.NewBulkInfo(GetCustomizeRedisInfo("server"))
 		case "client":
 			return exchange.NewBulkInfo(GetCustomizeRedisInfo("client"))
+		//TODO cpu信息
+		case "cpu":
+			return exchange.NewBulkInfo(GetCustomizeRedisInfo("server"))
+		//TODO 内存信息
+		case "memory":
+			return exchange.NewBulkInfo(GetCustomizeRedisInfo("server"))
 		default:
 			return exchange.NewNullBulkRequest()
 		}

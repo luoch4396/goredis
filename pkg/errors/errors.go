@@ -64,7 +64,7 @@ func (r *StandardError) Info() []byte {
 
 func NewStandardError(status string) *StandardError {
 	return &StandardError{
-		//todo:不知道redis返回错误时候需要添加ERR前缀
+		//redis 错误需要添加ERR前缀
 		Status: "ERR: " + status,
 	}
 }
@@ -73,15 +73,13 @@ func (r *StandardError) Error() string {
 	return r.Status
 }
 
-// UnsupportedError 不支持的操作
-type UnsupportedError struct {
-	message string
-}
+// UnknownError 未知错误
+type UnknownError struct{}
 
-func (e *UnsupportedError) Error() string {
-	return "Err unknown"
-}
-
-func (e *UnsupportedError) Info() []byte {
+func (r *UnknownError) Info() []byte {
 	return unknownErrBytes
+}
+
+func (r *UnknownError) Error() string {
+	return "Err unknown"
 }

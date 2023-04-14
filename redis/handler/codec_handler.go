@@ -43,7 +43,6 @@ func (*codecHandler) CodecName() string {
 }
 
 func (c *codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message) {
-	//var handleReadFunc = func() {
 	//包装连接对象
 	client := conn.NewClientConnBuilder().BuildChannel(ctx.Channel()).Build()
 	c.activeConn.Store(client, struct{}{})
@@ -57,7 +56,7 @@ func (c *codecHandler) HandleRead(ctx netty.InboundContext, message netty.Messag
 	for req := range ch {
 		if req.Error != nil {
 			if req.Error == io.EOF || req.Error == io.ErrUnexpectedEOF ||
-				strings.Contains(req.Error.Error(), "use closed network channel") {
+				strings.Contains(req.Error.Error(), "use of closed network connection") {
 				log.Errorf("handle message with errors, channel will be closed: " + ctx.Channel().RemoteAddr())
 				ctx.Channel().Close(req.Error)
 				return
@@ -83,28 +82,14 @@ func (c *codecHandler) HandleRead(ctx netty.InboundContext, message netty.Messag
 			ctx.Write(unknownOperation)
 		}
 	}
-	//}
-	//gopool.Go(handleReadFunc)
 }
 
 func (*codecHandler) HandleWrite(ctx netty.OutboundContext, message netty.Message) {
-	//switch s := message.(type) {
-	//case string:
-	//	ctx.HandleWrite(strings.NewReader(s))
-	//default:
-	//	ctx.HandleWrite(message)
-	//}
+
 }
 
 // 根据RESP解析为统一格式返回
 func parseStreaming(message netty.Message, ch chan<- *tcp.Request) {
-	//TODO:错误恢复 移动至协程池？
-	//defer func() {
-	//	//错误恢复
-	//	if err := recover(); err != nil {
-	//		err = fmt.Errorf(string(debug.Stack()), err)
-	//	}
-	//}()
 	t, ok := message.(io.Reader)
 	if !ok {
 		var err = fmt.Errorf("message codec produce any errors")
@@ -134,7 +119,6 @@ func parseStreaming(message netty.Message, ch chan<- *tcp.Request) {
 		//单行字符串（Simple Strings）： 响应的首字节是 "+"
 		case '+':
 			var content = string(lineBytes[1:])
-			println("收到数据1", content)
 			ch <- &tcp.Request{
 				Data: exchange.NewStatusInfo(content),
 			}

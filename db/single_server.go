@@ -49,12 +49,16 @@ func NewSingleServer() *SingleServer {
 
 func (server *SingleServer) Exec(client redis.ClientConn, cmdBytes [][]byte) (rep tcp.Info) {
 	//TODO:错误恢复 移动至协程池？
-	//defer func() {
-	//	if err := recover(); err != nil {
-	//		log.Warning(fmt.Sprintf("error occurs: %v\n%s", err, string(debug.Stack())))
-	//		rep = &exchange.UnknownErrResponse{}
-	//	}
-	//}()
+	defer func() {
+		if err := recover(); err != nil {
+			log.MakeErrorLog(err)
+			rep = &errors.UnknownError{}
+		}
+	}()
+	//认证
+	if !isAuthed(client) {
+		return errors.NewStandardError("please check your password")
+	}
 	cmdName := strings.ToLower(string(cmdBytes[0]))
 	switch cmdName {
 	case "ping":
@@ -63,9 +67,6 @@ func (server *SingleServer) Exec(client redis.ClientConn, cmdBytes [][]byte) (re
 		return authStrategy.DoCmdStrategy(client, cmdBytes[1:])
 	case "info":
 		return infoStrategy.DoCmdStrategy(client, cmdBytes)
-	}
-	if !isAuthenticated(client) {
-		return errors.NewStandardError("NOAUTH this redis service has not auth password")
 	}
 	dbIndex := client.GetDBIndex()
 	_, errRep := server.selectDB(dbIndex)
@@ -88,7 +89,7 @@ func (server *SingleServer) selectDB(dbIndex int) (*DB, *errors.StandardError) {
 	return server.dbs[dbIndex].Load().(*DB), nil
 }
 
-func isAuthenticated(client redis.ClientConn) bool {
+func isAuthed(client redis.ClientConn) bool {
 	pwd := config.GetPassword()
 	if pwd == "" {
 		return true
