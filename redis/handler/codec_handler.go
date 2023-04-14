@@ -43,48 +43,48 @@ func (*codecHandler) CodecName() string {
 }
 
 func (c *codecHandler) HandleRead(ctx netty.InboundContext, message netty.Message) {
-	var handleReadFunc = func() {
-		//包装连接对象
-		client := conn.NewClientConnBuilder().BuildChannel(ctx.Channel()).Build()
-		c.activeConn.Store(client, struct{}{})
-		//命令异步处理
-		ch := make(chan *tcp.Request)
-		var parseStreamingFunc = func() {
-			parseStreaming(message, ch)
+	//var handleReadFunc = func() {
+	//包装连接对象
+	client := conn.NewClientConnBuilder().BuildChannel(ctx.Channel()).Build()
+	c.activeConn.Store(client, struct{}{})
+	//命令异步处理
+	ch := make(chan *tcp.Request)
+	var parseStreamingFunc = func() {
+		parseStreaming(message, ch)
+	}
+	gopool.Go(parseStreamingFunc)
+	//循环结果
+	for req := range ch {
+		if req.Error != nil {
+			if req.Error == io.EOF || req.Error == io.ErrUnexpectedEOF ||
+				strings.Contains(req.Error.Error(), "use closed network channel") {
+				log.Errorf("handle message with errors, channel will be closed: " + ctx.Channel().RemoteAddr())
+				ctx.Channel().Close(req.Error)
+				return
+			}
+			errRep := errors.NewStandardError(req.Error.Error())
+			ctx.Write(errRep.Info())
+			continue
 		}
-		gopool.Go(parseStreamingFunc)
-		//循环结果
-		for req := range ch {
-			if req.Error != nil {
-				if req.Error == io.EOF || req.Error == io.ErrUnexpectedEOF ||
-					strings.Contains(req.Error.Error(), "use closed network channel") {
-					log.Errorf("handle message with errors, channel will be closed: " + ctx.Channel().RemoteAddr())
-					ctx.Channel().Close(req.Error)
-					return
-				}
-				errRep := errors.NewStandardError(req.Error.Error())
-				ctx.Write(errRep.Info())
-				continue
-			}
-			if req.Data == nil {
-				log.Error("empty commands")
-				continue
-			}
-			r, ok := req.Data.(*exchange.MultiBulkRequest)
-			if !ok {
-				log.Error("error from multi bulk exchange")
-				continue
-			}
-			//处理解析后的命令
-			result := c.server.Exec(client, r.Args)
-			if result != nil {
-				ctx.Write(result.Info())
-			} else {
-				ctx.Write(unknownOperation)
-			}
+		if req.Data == nil {
+			log.Error("empty commands")
+			continue
+		}
+		r, ok := req.Data.(*exchange.MultiBulkRequest)
+		if !ok {
+			log.Error("error from multi bulk exchange")
+			continue
+		}
+		//处理解析后的命令
+		result := c.server.Exec(client, r.Args)
+		if result != nil {
+			ctx.Write(result.Info())
+		} else {
+			ctx.Write(unknownOperation)
 		}
 	}
-	gopool.Go(handleReadFunc)
+	//}
+	//gopool.Go(handleReadFunc)
 }
 
 func (*codecHandler) HandleWrite(ctx netty.OutboundContext, message netty.Message) {

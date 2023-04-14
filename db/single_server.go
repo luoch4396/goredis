@@ -19,7 +19,6 @@ var (
 )
 
 type SingleServer struct {
-	*Server
 	//db数组
 	dbs []*atomic.Value
 	//角色（主、从）
