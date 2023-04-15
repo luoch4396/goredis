@@ -10,14 +10,13 @@ import (
 	"sync/atomic"
 )
 
-// ConcurrentDict 适用读多写少场景
+// ConcurrentDict 读写锁
 type ConcurrentDict struct {
 	dictShard  []*dictShard
 	count      int32
 	shardCount int
 }
 
-// 最简单的字典实现方案 参考java1.7 采用简单的分段锁
 type dictShard struct {
 	table         map[string]interface{}
 	readWriteLock sync.RWMutex

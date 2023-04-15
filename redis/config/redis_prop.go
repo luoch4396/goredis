@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	Version = "1.0.1"
+	Version = "1.0.0-goredis"
 )
 
 // Config 定义redis 配置

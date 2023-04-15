@@ -143,7 +143,7 @@ func (dl *Logger) basePrintLog(logLevel Level, message *string, v ...interface{}
 	}
 	err = dl.stdLog.Output(4, builder.String())
 	if err != nil {
-		log.Println("[ERROR] log print produce any errors: ", err)
+		log.Println("[ERROR] log print error: ", err)
 		return
 	}
 	if logLevel == FATAL {

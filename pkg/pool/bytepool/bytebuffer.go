@@ -26,9 +26,9 @@ type ByteBuffer struct {
 var Default ByteBuffer
 
 // 默认的ByteBuffer
-func init() {
-	NewByteBuffer(1024, 1024*32)
-}
+//func init() {
+//	NewByteBuffer(1024, 1024*32)
+//}
 
 func NewByteBuffer(bufferSize, freeSize int) Allocator {
 	if bufferSize <= 0 {

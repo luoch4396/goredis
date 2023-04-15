@@ -11,13 +11,6 @@ import (
 	"time"
 )
 
-var (
-	//定义策略
-	pingStrategy = NewCmdOperator(&PingStrategy{})
-	authStrategy = NewCmdOperator(&AuthStrategy{})
-	infoStrategy = NewCmdOperator(&InfoStrategy{})
-)
-
 type SingleServer struct {
 	//db数组
 	dbs []*atomic.Value
@@ -62,11 +55,13 @@ func (server *SingleServer) Exec(client redis.ClientConn, cmdBytes [][]byte) (re
 	cmdName := strings.ToLower(string(cmdBytes[0]))
 	switch cmdName {
 	case "ping":
-		return pingStrategy.DoCmdStrategy(client, cmdBytes[1:])
+		return DoPingCmd(cmdBytes[1:])
 	case "auth":
-		return authStrategy.DoCmdStrategy(client, cmdBytes[1:])
+		return DoAuthCmd(client, cmdBytes[1:])
 	case "info":
-		return infoStrategy.DoCmdStrategy(client, cmdBytes)
+		return DoInfoCmd(cmdBytes)
+	case "client":
+		return DoInfoCmd(cmdBytes)
 	}
 	dbIndex := client.GetDBIndex()
 	_, errRep := server.selectDB(dbIndex)
