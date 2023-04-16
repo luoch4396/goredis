@@ -8,7 +8,6 @@ import (
 	"goredis/redis/config"
 	"goredis/redis/exchange"
 	"runtime"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -100,8 +99,8 @@ func getServerInfo() string {
 	builder.WriteString("redis_version:" + config.Version + "\n")
 	builder.WriteString("redis_mode:" + config.GetServerType() + "\n")
 	builder.WriteString("os:" + runtime.GOOS + " " + runtime.GOARCH + "\n")
-	builder.WriteString("go_version:" + runtime.Version() + "\n")
-	builder.WriteString("pid:" + monitor.Cache["pid"] + "\n")
+	builder.WriteString("go_version:" + monitor.GetGOVersion() + "\n")
+	builder.WriteString("pid:" + monitor.GetPid() + "\n")
 	builder.WriteString("tcp_port:" + strconv.Itoa(config.GetPort()) + "\n")
 	builder.WriteString("uptime_in_seconds:" + strconv.FormatInt(int64(startUpTime), 10) + "\n")
 	builder.WriteString("uptime_in_days:" + strconv.FormatInt(int64(startUpTime/time.Duration(3600*24)), 10) + "\n")
@@ -110,27 +109,30 @@ func getServerInfo() string {
 
 //cpu
 func getCpuInfo() string {
+	metricsMap := monitor.GetMetricsInfo(monitor.Goroutines)
 	builder := &strings.Builder{}
-	builder.Grow(64)
+	builder.Grow(256)
 	builder.WriteString("total_cpus:" + strconv.Itoa(runtime.NumCPU()) + "\n")
 	builder.WriteString("runtime_threads:" + strconv.Itoa(monitor.GetRuntimeNumThreads()) + "\n")
-	builder.WriteString("total_goroutines:" + strconv.Itoa(runtime.NumGoroutine()) + "\n")
+	builder.WriteString("runtime_goroutines:" + metricsMap[monitor.Goroutines] + "\n")
 	builder.WriteString("used_cpu:" + "" + "\n")
 	return builder.String()
 }
 
 //memory
 func getMemoryInfo() string {
-	//gc监控
-	var d debug.GCStats
-	debug.ReadGCStats(&d)
+	v := monitor.GetGCInfo()
+	metricsMap := monitor.GetMetricsInfo(monitor.MemoryClassesTotalBytes, monitor.MemoryClassesHeapObjectsBytes,
+		monitor.MemoryClassesHeapUnusedBytes,
+	)
 	builder := &strings.Builder{}
 	builder.Grow(256)
-	builder.WriteString("total_memory:" + "" + "\n")
+	builder.WriteString("total_memory:" + metricsMap[monitor.MemoryClassesTotalBytes] + "\n")
 	builder.WriteString("used_memory:" + "" + "\n")
-	builder.WriteString("used_memory_heap:" + "" + "\n")
-	builder.WriteString("gc_num:" + strconv.FormatInt(d.NumGC, 10) + "\n")
-	builder.WriteString("gc_pause_total:" + strconv.FormatInt(int64(d.PauseTotal), 10) + "\n")
-	builder.WriteString("memory_clear_strategy:" + "not support" + "\n")
+	builder.WriteString("used_memory_heap:" + metricsMap[monitor.MemoryClassesHeapObjectsBytes] + "\n")
+	builder.WriteString("unused_memory_heap:" + metricsMap[monitor.MemoryClassesHeapUnusedBytes] + "\n")
+	builder.WriteString("gc_count:" + strconv.FormatInt(v.NumGC, 10) + "\n")
+	builder.WriteString("gc_pause_total:" + strconv.FormatInt(int64(v.PauseTotal), 10) + "\n")
+	builder.WriteString("memory_clear_strategy:" + "this goredis version is not supported" + "\n")
 	return builder.String()
 }

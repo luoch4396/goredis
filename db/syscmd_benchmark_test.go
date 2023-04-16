@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"goredis/pkg/monitor"
 	"goredis/redis/config"
 	"os"
 	"runtime"
@@ -15,34 +14,6 @@ func BenchmarkGetServerInfo(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		getServerInfo()
-	}
-}
-
-func BenchmarkGetServerInfoSprintf(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		startUpTime := time.Since(config.GetStartUpTime()) / time.Second
-		fmt.Sprintf("# Server\r\n"+
-			//redis版本信息
-			"redis_version:%s\r\n"+
-			"redis_mode:%s\r\n"+
-			"os:%s\r\n"+
-			"sys_bits:%s\r\n"+
-			"go_version:%s\r\n"+
-			"process_id:%s\r\n"+
-			"redis_port:%d\r\n"+
-			"uptime_in_seconds:%d\r\n"+
-			"uptime_in_days:%d\r\n",
-			config.Version,
-			config.GetServerType(),
-			monitor.Cache["os_info"],
-			monitor.Cache["bits"],
-			monitor.Cache["go_version"],
-			monitor.Cache["pid"],
-			config.GetPort(),
-			startUpTime,
-			startUpTime/time.Duration(3600*24))
 	}
 }
 
