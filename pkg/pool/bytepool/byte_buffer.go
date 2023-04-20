@@ -13,6 +13,8 @@ type Allocator interface {
 	WriteString(buf []byte, more string) []byte
 	// Free 释放
 	Free(buf []byte)
+
+	GetCap() int
 }
 
 // ByteBuffer 字节池
@@ -52,6 +54,10 @@ func NewByteBuffer(bufferSize, freeSize int) Allocator {
 	}
 
 	return b
+}
+
+func (b *ByteBuffer) GetCap() int {
+	return 0
 }
 
 func (b *ByteBuffer) Malloc(size int) []byte {
