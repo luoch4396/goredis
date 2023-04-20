@@ -6,13 +6,13 @@ type Allocator interface {
 	// Malloc 分配
 	Malloc(size int) []byte
 	// Recycle 回收
-	Recycle(buf []byte, size int) []byte
+	Recycle(size int) []byte
 	// Write 写入
-	Write(buf []byte, more ...byte) []byte
+	Write(more ...byte) []byte
 	// WriteString 写入字符串
-	WriteString(buf []byte, more string) []byte
+	WriteString(more string) []byte
 	// Free 释放
-	Free(buf []byte)
+	Free()
 
 	GetCap() int
 }
@@ -21,23 +21,21 @@ type Allocator interface {
 type ByteBuffer struct {
 	bufferSize int
 	freeSize   int
-	pool       *sync.Pool
 	cap        int64
+	buf        []byte
 }
 
-var Default ByteBuffer
-
-// 默认的ByteBuffer
-//func init() {
-//	NewByteBuffer(1024, 1024*32)
-//}
+var (
+	pool        *sync.Pool
+	defaultSize = 512
+)
 
 func NewByteBuffer(bufferSize, freeSize int) Allocator {
 	if bufferSize <= 0 {
 		bufferSize = 32
 	}
 	if freeSize <= 0 {
-		freeSize = 1024 * 32
+		freeSize = 1024
 	}
 	if freeSize < bufferSize {
 		freeSize = bufferSize
@@ -46,10 +44,11 @@ func NewByteBuffer(bufferSize, freeSize int) Allocator {
 	b := &ByteBuffer{
 		bufferSize: bufferSize,
 		freeSize:   freeSize,
-		pool:       &sync.Pool{},
+		buf:        make([]byte, defaultSize),
 	}
-	b.pool.New = func() interface{} {
-		buf := make([]byte, bufferSize)
+	pool = &sync.Pool{}
+	pool.New = func() interface{} {
+		buf := make([]byte, defaultSize)
 		return &buf
 	}
 
@@ -64,7 +63,7 @@ func (b *ByteBuffer) Malloc(size int) []byte {
 	if size > b.freeSize {
 		return make([]byte, size)
 	}
-	freeBuf := b.pool.Get().(*[]byte)
+	freeBuf := pool.Get().(*[]byte)
 	n := cap(*freeBuf)
 	if n < size {
 		*freeBuf = append((*freeBuf)[:n], make([]byte, size-n)...)
@@ -72,73 +71,35 @@ func (b *ByteBuffer) Malloc(size int) []byte {
 	return (*freeBuf)[:size]
 }
 
-func (b *ByteBuffer) Recycle(buf []byte, size int) []byte {
-	n := cap(buf)
+func (b *ByteBuffer) Recycle(size int) []byte {
+	n := cap(b.buf)
 	if size <= n {
-		return buf[:size]
+		return b.buf[:size]
 	}
 	if n < b.freeSize {
-		freeBuf := b.pool.Get().(*[]byte)
+		freeBuf := pool.Get().(*[]byte)
 		if n < size {
 			*freeBuf = append((*freeBuf)[:n], make([]byte, size-n)...)
 		}
 		*freeBuf = (*freeBuf)[:size]
-		copy(*freeBuf, buf)
-		b.Free(buf)
+		copy(*freeBuf, b.buf)
+		b.Free()
 		return *freeBuf
 	}
-	return append(buf[:n], make([]byte, size-n)...)[:size]
+	return append(b.buf[:n], make([]byte, size-n)...)[:size]
 }
 
-func (b *ByteBuffer) Write(buf []byte, more ...byte) []byte {
-	return append(buf, more...)
+func (b *ByteBuffer) Write(more ...byte) []byte {
+	return append(b.buf, more...)
 }
 
-func (b *ByteBuffer) WriteString(buf []byte, more string) []byte {
-	return append(buf, more...)
+func (b *ByteBuffer) WriteString(more string) []byte {
+	return append(b.buf, more...)
 }
 
-func (b *ByteBuffer) Free(buf []byte) {
-	if cap(buf) > b.freeSize {
+func (b *ByteBuffer) Free() {
+	if cap(b.buf) > b.freeSize {
 		return
 	}
-	b.pool.Put(&buf)
-}
-
-type ByteBufAllocator struct {
-}
-
-func (a *ByteBufAllocator) Malloc(size int) []byte {
-	return make([]byte, size)
-}
-
-func (a *ByteBufAllocator) Recycle(buf []byte, size int) []byte {
-	if size <= cap(buf) {
-		return buf[:size]
-	}
-	newBuf := make([]byte, size)
-	copy(newBuf, buf)
-	return newBuf
-}
-
-//---------------------- use default byte buffer-----------------------------
-
-func DefaultMalloc(size int) []byte {
-	return Default.Malloc(size)
-}
-
-func DefaultRecycle(buf []byte, size int) []byte {
-	return Default.Recycle(buf, size)
-}
-
-func DefaultWrite(buf []byte, more ...byte) []byte {
-	return Default.Write(buf, more...)
-}
-
-func DefaultWriteString(buf []byte, more string) []byte {
-	return Default.WriteString(buf, more)
-}
-
-func DefaultFree(buf []byte) {
-	Default.Free(buf)
+	pool.Put(&b.buf)
 }
