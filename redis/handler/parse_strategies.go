@@ -34,9 +34,9 @@ func (operator *ParseOperator) DoParseStrategy(reader *bufio.Reader, lineBytes [
 type BulkStringsStrategy struct{}
 
 func (*BulkStringsStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error {
-	strLen, err := strconv.ParseInt(string(lineBytes[1:]), 10, 64)
+	strLen, err := strconv.ParseInt(utils.BytesToString(lineBytes[1:]), 10, 64)
 	if err != nil || strLen < -1 {
-		handleParseError(utils.NewStringBuilder("illegal bulk strings lineBytes ", string(lineBytes[1:])), ch)
+		handleParseError(utils.NewStringBuilder("illegal bulk strings lineBytes ", utils.BytesToString(lineBytes[1:])), ch)
 		return nil
 	} else if strLen == -1 {
 		ch <- &tcp.Request{
@@ -58,9 +58,9 @@ func (*BulkStringsStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<-
 type ArrayStrategy struct{}
 
 func (*ArrayStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.Request) error {
-	nStrs, err := strconv.ParseInt(string(lineBytes[1:]), 10, 64)
+	nStrs, err := strconv.ParseInt(utils.BytesToString(lineBytes[1:]), 10, 64)
 	if err != nil || nStrs < 0 {
-		handleParseError(utils.NewStringBuilder("illegal bulk strings lineBytes ", string(lineBytes[1:])), ch)
+		handleParseError(utils.NewStringBuilder("illegal bulk strings lineBytes ", utils.BytesToString(lineBytes[1:])), ch)
 		return nil
 	} else if nStrs == 0 {
 		ch <- &tcp.Request{
@@ -77,12 +77,12 @@ func (*ArrayStrategy) Do(reader *bufio.Reader, lineBytes []byte, ch chan<- *tcp.
 		}
 		length := len(line)
 		if length < 4 || line[length-2] != '\r' || line[0] != '$' {
-			handleParseError(utils.NewStringBuilder("illegal bulk strings lineBytes ", string(line)), ch)
+			handleParseError(utils.NewStringBuilder("illegal bulk strings lineBytes ", utils.BytesToString(line)), ch)
 			break
 		}
-		strLen, err := strconv.ParseInt(string(line[1:length-2]), 10, 64)
+		strLen, err := strconv.ParseInt(utils.BytesToString(line[1:length-2]), 10, 64)
 		if err != nil || strLen < -1 {
-			handleParseError(utils.NewStringBuilder("illegal bulk strings length ", string(line)), ch)
+			handleParseError(utils.NewStringBuilder("illegal bulk strings length ", utils.BytesToString(line)), ch)
 			break
 		} else if strLen == -1 {
 			lines = append(lines, []byte{})

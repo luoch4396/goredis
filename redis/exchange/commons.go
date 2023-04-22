@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	nullBulkBytes       = []byte("$-1\r\n")
+	nullBulkBytes       = utils.StringToBytes("$-1\r\n")
 	CRLF                = "\r\n"
-	emptyMultiBulkBytes = []byte("*0\r\n")
+	emptyMultiBulkBytes = utils.StringToBytes("*0\r\n")
 )
 
 // StatusInfo 状态指令
@@ -23,7 +23,7 @@ func NewStatusInfo(status string) *StatusInfo {
 }
 
 func (r *StatusInfo) Info() []byte {
-	return []byte("+" + r.Status + CRLF)
+	return utils.StringToBytes("+" + r.Status + CRLF)
 }
 
 // BulkInfo 二进制指令
@@ -44,5 +44,6 @@ func (r *BulkInfo) Info() []byte {
 	//for example:
 	//$(命令长度)
 	//命令具体参数：QUIT
-	return []byte(utils.NewStringBuilder("$", strconv.Itoa(len(r.Arg)), CRLF, string(r.Arg), CRLF))
+	return utils.StringToBytes(utils.NewStringBuilder(
+		"$", strconv.Itoa(len(r.Arg)), CRLF, utils.BytesToString(r.Arg), CRLF))
 }

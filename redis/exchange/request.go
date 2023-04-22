@@ -2,6 +2,7 @@ package exchange
 
 import (
 	"bytes"
+	"goredis/pkg/utils"
 	"strconv"
 )
 
@@ -24,7 +25,7 @@ func (r *MultiBulkRequest) Info() []byte {
 		if arg == nil {
 			buf.WriteString("$-1" + CRLF)
 		} else {
-			buf.WriteString("$" + strconv.Itoa(len(arg)) + CRLF + string(arg) + CRLF)
+			buf.WriteString("$" + strconv.Itoa(len(arg)) + CRLF + utils.BytesToString(arg) + CRLF)
 		}
 	}
 	return buf.Bytes()
@@ -42,7 +43,7 @@ func NewIntRequest(code int64) *IntRequest {
 }
 
 func (r *IntRequest) Info() []byte {
-	return []byte(":" + strconv.FormatInt(r.Code, 10) + CRLF)
+	return utils.StringToBytes(":" + strconv.FormatInt(r.Code, 10) + CRLF)
 }
 
 // EmptyBulkRequest 空字符串

@@ -58,7 +58,7 @@ func (dict *SpinDict) Put(key string, value interface{}) (result bool) {
 		log.Errorf("", err)
 		return false
 	}
-	var hashCode = hasher.Sum32([]byte(key))
+	var hashCode = hasher.Sum32(key)
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
 	s.lock.Lock()
@@ -82,7 +82,7 @@ func (dict *SpinDict) Get(key string) (value interface{}, exists bool) {
 		log.Errorf("", err)
 		return nil, false
 	}
-	var hashCode = hasher.Sum32([]byte(key))
+	var hashCode = hasher.Sum32(key)
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
 	//TODO:读是否可以不加锁？
@@ -98,7 +98,7 @@ func (dict *SpinDict) PutIfAbsent(key string, value interface{}) (result bool) {
 		log.Errorf("", err)
 		return false
 	}
-	var hashCode = hasher.Sum32([]byte(key))
+	var hashCode = hasher.Sum32(key)
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
 	s.lock.Lock()
@@ -116,7 +116,7 @@ func (dict *SpinDict) PutIfPresent(key string, value interface{}) (result bool) 
 		log.Errorf("", err)
 		return false
 	}
-	var hashCode = hasher.Sum32([]byte(key))
+	var hashCode = hasher.Sum32(key)
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
 	s.lock.Lock()

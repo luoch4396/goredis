@@ -5,6 +5,7 @@ import (
 	"goredis/interface/tcp"
 	"goredis/pkg/errors"
 	"goredis/pkg/log"
+	"goredis/pkg/utils"
 	"goredis/redis/config"
 	"strings"
 	"sync/atomic"
@@ -52,7 +53,7 @@ func (server *SingleServer) Exec(client redis.ClientConn, cmdBytes [][]byte) (re
 	if !isAuthed(client) {
 		return errors.NewStandardError("please check your password")
 	}
-	cmdName := strings.ToLower(string(cmdBytes[0]))
+	cmdName := strings.ToLower(utils.BytesToString(cmdBytes[0]))
 	switch cmdName {
 	case "ping":
 		return DoPingCmd(cmdBytes[1:])

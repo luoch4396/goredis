@@ -7,7 +7,7 @@ import (
 
 var (
 	CRLF            = "\r\n"
-	unknownErrBytes = []byte("-Err unknown\r\n")
+	unknownErrBytes = utils.StringToBytes("-Err unknown\r\n")
 )
 
 // NilPointerError 空指针
@@ -59,7 +59,7 @@ type StandardError struct {
 }
 
 func (r *StandardError) Info() []byte {
-	return []byte("-" + r.Status + CRLF)
+	return utils.StringToBytes("-" + r.Status + CRLF)
 }
 
 func NewStandardError(status string) *StandardError {

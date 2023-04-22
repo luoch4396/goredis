@@ -19,7 +19,7 @@ func DoPingCmd(args [][]byte) tcp.Info {
 	if len(args) == 0 {
 		return &exchange.PongResponse{}
 	} else if len(args) == 1 {
-		return exchange.NewStatusInfo(string(args[0]))
+		return exchange.NewStatusInfo(utils.BytesToString(args[0]))
 	} else {
 		return errors.NewStandardError("wrong number of arguments for 'ping' command")
 	}
@@ -35,7 +35,7 @@ func DoAuthCmd(conn redis.ClientConn, args [][]byte) tcp.Info {
 		//服务端无密码，不予认证
 		return ok
 	}
-	passwd := string(args[0])
+	passwd := utils.BytesToString(args[0])
 	conn.SetPassword(passwd)
 	if config.GetPassword() != passwd {
 		return errors.NewStandardError("invalid password")
@@ -52,9 +52,9 @@ func DoInfoCmd(args [][]byte) tcp.Info {
 		for _, s := range infoCommandList {
 			builder.WriteString(GetCustomizeRedisInfo(s))
 		}
-		return exchange.NewBulkInfo([]byte(builder.String()))
+		return exchange.NewBulkInfo(utils.StringToBytes(builder.String()))
 	} else if len(args) == 2 {
-		section := strings.ToLower(string(args[1]))
+		section := strings.ToLower(utils.BytesToString(args[1]))
 		switch section {
 		//服务器信息
 		case "server":

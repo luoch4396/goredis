@@ -73,7 +73,7 @@ func (dict *ConcurrentDict) Put(key string, value interface{}) (result bool) {
 		log.Errorf("", err)
 		return false
 	}
-	var hashCode = hasher.Sum32([]byte(key))
+	var hashCode = hasher.Sum32(key)
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
 	s.readWriteLock.Lock()
@@ -97,7 +97,7 @@ func (dict *ConcurrentDict) Get(key string) (value interface{}, exists bool) {
 		log.Errorf("", err)
 		return nil, false
 	}
-	var hashCode = hasher.Sum32([]byte(key))
+	var hashCode = hasher.Sum32(key)
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
 	s.readWriteLock.RLock()
@@ -112,7 +112,7 @@ func (dict *ConcurrentDict) PutIfAbsent(key string, value interface{}) (result b
 		log.Errorf("", err)
 		return false
 	}
-	var hashCode = hasher.Sum32([]byte(key))
+	var hashCode = hasher.Sum32(key)
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
 	s.readWriteLock.Lock()
@@ -130,7 +130,7 @@ func (dict *ConcurrentDict) PutIfPresent(key string, value interface{}) (result 
 		log.Errorf("", err)
 		return false
 	}
-	var hashCode = hasher.Sum32([]byte(key))
+	var hashCode = hasher.Sum32(key)
 	var index = dict.spread(hashCode)
 	var s = dict.getShard(index)
 	s.readWriteLock.Lock()

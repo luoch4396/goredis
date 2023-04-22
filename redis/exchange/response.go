@@ -1,9 +1,11 @@
 package exchange
 
+import "goredis/pkg/utils"
+
 var (
-	pongBytes     = []byte("+PONG\r\n")
+	pongBytes     = utils.StringToBytes("+PONG\r\n")
 	oneOkResponse = new(OkResponse)
-	okBytes       = []byte("+OK\r\n")
+	okBytes       = utils.StringToBytes("+OK\r\n")
 )
 
 // PongResponse +PONG

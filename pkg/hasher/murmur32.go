@@ -1,6 +1,7 @@
 package hasher
 
 import (
+	"goredis/pkg/utils"
 	"hash"
 	"unsafe"
 )
@@ -107,8 +108,8 @@ func (d *digest32) Sum32() (h1 uint32) {
 //	hasher := New32()
 //	hasher.Write(interface)
 //	return hasher.Sum32()
-func Sum32(data []byte) uint32 {
-	return Sum32WithSeed(data, 0)
+func Sum32(data string) uint32 {
+	return Sum32WithSeed(utils.StringToBytes(data), 0)
 }
 
 // Sum32WithSeed returns the MurmurHash3 sum of interface. It is equivalent to the

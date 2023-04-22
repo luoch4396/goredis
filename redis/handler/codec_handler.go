@@ -11,6 +11,7 @@ import (
 	"goredis/pkg/errors"
 	"goredis/pkg/log"
 	"goredis/pkg/pool/gopool"
+	"goredis/pkg/utils"
 	"goredis/redis/conn"
 	"goredis/redis/exchange"
 	"io"
@@ -24,7 +25,7 @@ var (
 	arrayStrategy       = NewParseOperator(&ArrayStrategy{})
 	bulkStringsStrategy = NewParseOperator(&BulkStringsStrategy{})
 	//暂不支持的命令/未知命令
-	unknownOperation = []byte("-ERR unknown\r\n")
+	unknownOperation = utils.StringToBytes("-ERR unknown\r\n")
 )
 
 func NewRedisCodec(server redis.Server) codec.Codec {
@@ -118,7 +119,7 @@ func parseStreaming(message netty.Message, ch chan<- *tcp.Request) {
 		switch lineBytes[0] {
 		//单行字符串（Simple Strings）： 响应的首字节是 "+"
 		case '+':
-			var content = string(lineBytes[1:])
+			var content = utils.BytesToString(lineBytes[1:])
 			ch <- &tcp.Request{
 				Data: exchange.NewStatusInfo(content),
 			}
@@ -126,7 +127,7 @@ func parseStreaming(message netty.Message, ch chan<- *tcp.Request) {
 		//错误（Errors）： 响应的首字节是 "-"
 		case '-':
 			ch <- &tcp.Request{
-				Data: errors.NewStandardError(string(lineBytes[1:])),
+				Data: errors.NewStandardError(utils.BytesToString(lineBytes[1:])),
 			}
 		//多行字符串（Bulk Strings）： 响应的首字节是"\$"
 		case '$':
@@ -143,7 +144,7 @@ func parseStreaming(message netty.Message, ch chan<- *tcp.Request) {
 			}
 		//整型（Integers）： 响应的首字节是 ":"
 		case ':':
-			value, err := strconv.ParseInt(string(lineBytes[1:]), 10, 64)
+			value, err := strconv.ParseInt(utils.BytesToString(lineBytes[1:]), 10, 64)
 			if err != nil {
 				log.Errorf("", err)
 				continue
