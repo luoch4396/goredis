@@ -30,6 +30,14 @@ var (
 	defaultSize = 512
 )
 
+func init() {
+	pool = &sync.Pool{}
+	pool.New = func() interface{} {
+		buf := make([]byte, defaultSize)
+		return &buf
+	}
+}
+
 func NewByteBuffer(bufferSize, freeSize int) Allocator {
 	if bufferSize <= 0 {
 		bufferSize = 32
@@ -46,12 +54,6 @@ func NewByteBuffer(bufferSize, freeSize int) Allocator {
 		freeSize:   freeSize,
 		buf:        make([]byte, defaultSize),
 	}
-	pool = &sync.Pool{}
-	pool.New = func() interface{} {
-		buf := make([]byte, defaultSize)
-		return &buf
-	}
-
 	return b
 }
 

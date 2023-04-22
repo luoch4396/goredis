@@ -6,7 +6,7 @@ type eventLoop struct {
 	//*timer.Timer
 	sync.WaitGroup
 	pollers []*poll
-	*loadBalancer
+	*LoadBalancer
 }
 
 func NewEventLoop() {

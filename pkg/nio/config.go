@@ -1,11 +1,22 @@
 package nio
 
-// Config TCP配置
-type Config struct {
+import (
+	"goredis/pkg/log"
+	"time"
+)
+
+// TcpConfigs TCP配置
+type TcpConfigs struct {
 	MaxOpenFiles int
-	KeepAlive    bool
+	NumPolls     int
+	Lb           LoadBalancer
+	KeepAlive    time.Duration
+	NoDelay      bool
+	RecvBuffer   int
+	SendBuffer   int
+	Log          log.FormatterLogger
 }
 
-var (
-	MaxOpenFiles = 1024 * 1024 * 2
-)
+//var (
+//	MaxOpenFiles = 1024 * 1024 * 2
+//)

@@ -5,6 +5,7 @@ import (
 	"goredis/interface/tcp"
 	"goredis/pkg/errors"
 	"goredis/pkg/monitor"
+	"goredis/pkg/utils"
 	"goredis/redis/config"
 	"goredis/redis/exchange"
 	"runtime"
@@ -57,19 +58,19 @@ func DoInfoCmd(args [][]byte) tcp.Info {
 		switch section {
 		//服务器信息
 		case "server":
-			return exchange.NewBulkInfo([]byte(GetCustomizeRedisInfo("server")))
+			return exchange.NewBulkInfo(utils.StringToBytes(GetCustomizeRedisInfo("server")))
 		//客户端列表
 		case "list":
-			return exchange.NewBulkInfo([]byte(GetCustomizeRedisInfo("list")))
+			return exchange.NewBulkInfo(utils.StringToBytes(GetCustomizeRedisInfo("list")))
 		//cpu
 		case "cpu":
-			return exchange.NewBulkInfo([]byte(GetCustomizeRedisInfo("cpu")))
+			return exchange.NewBulkInfo(utils.StringToBytes(GetCustomizeRedisInfo("cpu")))
 		//内存
 		case "memory":
-			return exchange.NewBulkInfo([]byte(GetCustomizeRedisInfo("memory")))
+			return exchange.NewBulkInfo(utils.StringToBytes(GetCustomizeRedisInfo("memory")))
 		//统计
 		case "stats":
-			return exchange.NewBulkInfo([]byte(GetCustomizeRedisInfo("stats")))
+			return exchange.NewBulkInfo(utils.StringToBytes(GetCustomizeRedisInfo("stats")))
 		default:
 			return exchange.NewNullBulkRequest()
 		}

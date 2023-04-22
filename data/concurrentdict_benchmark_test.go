@@ -13,8 +13,8 @@ func BenchmarkConcurrentDictGetByPool(b *testing.B) {
 	p := gopool.NewMixedPool(32, 4, 1024)
 	b.ReportAllocs()
 	b.ResetTimer()
+	wg := sync.WaitGroup{}
 	for i := 0; i < b.N; i++ {
-		wg := sync.WaitGroup{}
 		wg.Add(BenchTimes)
 		for j := 0; j < BenchTimes; j++ {
 			p.Go(func() {

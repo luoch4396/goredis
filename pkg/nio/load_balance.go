@@ -1,10 +1,10 @@
 package nio
 
-//负载均衡器
-type loadBalancer int
+//LoadBalancer 负载均衡器
+type LoadBalancer int
 
 const (
-	roundRobin loadBalancer = iota
+	roundRobin LoadBalancer = iota
 	hash
 	consistentHash
 )
