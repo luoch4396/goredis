@@ -112,7 +112,7 @@ func getServerInfo() string {
 func getCpuInfo() string {
 	metricsMap := monitor.GetMetricsInfo(monitor.Goroutines)
 	builder := &strings.Builder{}
-	builder.Grow(256)
+	builder.Grow(128)
 	builder.WriteString("total_cpus:" + strconv.Itoa(runtime.NumCPU()) + "\n")
 	builder.WriteString("runtime_threads:" + strconv.Itoa(monitor.GetRuntimeNumThreads()) + "\n")
 	builder.WriteString("runtime_goroutines:" + metricsMap[monitor.Goroutines] + "\n")

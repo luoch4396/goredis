@@ -3,6 +3,7 @@
 package nio
 
 import (
+	"fmt"
 	"goredis/pkg/log"
 	"net"
 	"os"
@@ -23,21 +24,22 @@ type poll struct {
 	eventList    []syscall.Kevent_t
 	mux          sync.Mutex
 	index        int
+	g            *Engine
 }
 
 func (p *poll) addConn(c *Conn) {
 	fd := c.fd
-	//if fd >= len(p.g.connsUnix) {
-	//c.closeWithError(fmt.Errorf("too many open files, fd[%d] >= MaxOpenFiles[%d]", fd, len(p.g.connsUnix)))
-	//return
-	//}
+	if fd >= len(p.g.connsUnix) {
+		c.closeWithError(fmt.Errorf("too many open files, fd[%d] >= MaxOpenFiles[%d]", fd, len(p.g.connsUnix)))
+		return
+	}
 	c.p = p
-	//p.g.connsUnix[fd] = c
+	p.g.connsUnix[fd] = c
 	p.modRead(fd)
 }
 
 func (p *poll) getConn(fd int) *Conn {
-	//return p.g.connsUnix[fd]
+	return p.g.connsUnix[fd]
 	return nil
 }
 
@@ -128,37 +130,37 @@ func (p *poll) readWrite(ev *syscall.Kevent_t) {
 	c := p.getConn(fd)
 	if c != nil {
 		if ev.Filter&syscall.EVFILT_READ == syscall.EVFILT_READ {
-			//if p.g.onRead == nil {
-			//	for {
-			//		rc, n, err := c.ReadAndGetConn(buffer)
-			//		if n > 0 {
-			//			p.g.onData(rc, buffer[:n])
-			//		}
-			//		p.g.payback(c, buffer)
-			//		if err == syscall.EINTR {
-			//			continue
-			//		}
-			//		if err == syscall.EAGAIN {
-			//			return
-			//		}
-			//		if (err != nil || n == 0) && ev.Flags&syscall.EV_DELETE == 0 {
-			//			c.closeWithError(err)
-			//		}
-			//		if n < len(buffer) {
-			//			break
-			//		}
-			//	}
-			//} else {
-			//p.g.onRead(c)
-			//}
+			if p.g.onRead == nil {
+				for {
+					rc, n, err := c.ReadAndGetConn(buffer)
+					if n > 0 {
+						p.g.onData(rc, buffer[:n])
+					}
+					p.g.payback(c, buffer)
+					if err == syscall.EINTR {
+						continue
+					}
+					if err == syscall.EAGAIN {
+						return
+					}
+					if (err != nil || n == 0) && ev.Flags&syscall.EV_DELETE == 0 {
+						c.closeWithError(err)
+					}
+					if n < len(buffer) {
+						break
+					}
+				}
+			} else {
+				p.g.onRead(c)
+			}
 		}
 
 		if ev.Filter&syscall.EVFILT_WRITE == syscall.EVFILT_WRITE {
-			//c.flush()
+			c.flush()
 		}
 	} else {
 		syscall.Close(fd)
-		// p.deleteEvent(fd)
+		p.deleteEvent(fd)
 	}
 }
 

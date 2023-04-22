@@ -2,6 +2,7 @@ package nio
 
 import (
 	"goredis/pkg/log"
+	"goredis/pkg/pool/bytepool"
 	"time"
 )
 
@@ -9,12 +10,13 @@ import (
 type TcpConfigs struct {
 	MaxOpenFiles int
 	NumPolls     int
-	Lb           LoadBalancer
-	KeepAlive    time.Duration
+	Lb           *LoadBalancer
+	KeepAlive    *time.Duration
 	NoDelay      bool
 	RecvBuffer   int
 	SendBuffer   int
 	Log          log.FormatterLogger
+	Allocator    bytepool.Allocator
 }
 
 //var (

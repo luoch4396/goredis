@@ -1,15 +1,132 @@
 package nio
 
-// ConnType 连接类型
+import (
+	"goredis/pkg/log"
+)
+
+// ConnType .
 type ConnType = int8
 
 const (
-	// ConnTypeTCP tcp连接
+	// ConnTypeTCP .
 	ConnTypeTCP ConnType = iota + 1
-	// ConnTypeUnix 进程连接
+	// ConnTypeUDPServer .
+	ConnTypeUDPServer
+	// ConnTypeUDPClientFromRead .
+	ConnTypeUDPClientFromRead
+	// ConnTypeUDPClientFromDial .
+	ConnTypeUDPClientFromDial
+	// ConnTypeUnix .
 	ConnTypeUnix
 )
 
-func IsTcpConn() {
+// Type .
+func (c *Conn) Type() ConnType {
+	return c.typ
+}
 
+// IsTCP .
+func (c *Conn) IsTCP() bool {
+	return c.typ == ConnTypeTCP
+}
+
+// IsUnix .
+func (c *Conn) IsUnix() bool {
+	return c.typ == ConnTypeUnix
+}
+
+// OnData registers callback for data.
+func (c *Conn) OnData(h func(conn *Conn, data []byte)) {
+	c.DataHandler = h
+}
+
+// Lock .
+func (c *Conn) Lock() {
+	c.mux.Lock()
+}
+
+// Unlock .
+func (c *Conn) Unlock() {
+	c.mux.Unlock()
+}
+
+// IsClosed .
+func (c *Conn) IsClosed() (bool, error) {
+	return c.closed, c.closeErr
+}
+
+// ExecuteLen .
+func (c *Conn) ExecuteLen() int {
+	c.mux.Lock()
+	n := len(c.execList)
+	c.mux.Unlock()
+	return n
+}
+
+// Execute .
+func (c *Conn) Execute(f func()) bool {
+	c.mux.Lock()
+	if c.closed {
+		c.mux.Unlock()
+		return false
+	}
+
+	isHead := len(c.execList) == 0
+	c.execList = append(c.execList, f)
+	c.mux.Unlock()
+
+	if isHead {
+		c.p.g.Execute(func() {
+			i := 0
+			for {
+				func() {
+					defer func() {
+						if err := recover(); err != nil {
+							log.MakeErrorLog(err)
+						}
+					}()
+					f()
+				}()
+
+				c.mux.Lock()
+				i++
+				if len(c.execList) == i {
+					c.execList = c.execList[0:0]
+					c.mux.Unlock()
+					return
+				}
+				f = c.execList[i]
+				c.mux.Unlock()
+			}
+		})
+	}
+
+	return true
+}
+
+// MustExecute .
+func (c *Conn) MustExecute(f func()) {
+	c.mux.Lock()
+	isHead := len(c.execList) == 0
+	c.execList = append(c.execList, f)
+	c.mux.Unlock()
+
+	if isHead {
+		c.p.g.Execute(func() {
+			i := 0
+			for {
+				f()
+
+				c.mux.Lock()
+				i++
+				if len(c.execList) == i {
+					c.execList = c.execList[0:0]
+					c.mux.Unlock()
+					return
+				}
+				f = c.execList[i]
+				c.mux.Unlock()
+			}
+		})
+	}
 }
