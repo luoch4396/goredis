@@ -65,7 +65,7 @@ func (g *Engine) Start() error {
 func NewEngine(conf Config) *Engine {
 	cpuNum := runtime.NumCPU()
 	if conf.Name == "" {
-		conf.Name = "NB"
+		conf.Name = "NIO"
 	}
 	if conf.NPoller <= 0 {
 		conf.NPoller = cpuNum

@@ -29,7 +29,6 @@ var (
 
 // Config Of Engine.
 type Config struct {
-	// Name describes your gopher name for logging, it's set to "NB" by default.
 	Name string
 
 	// Network is the listening protocol, used with Addrs together.

@@ -388,7 +388,6 @@ func newConn(conn net.Conn) *Conn {
 	return c
 }
 
-// NBConn converts net.Conn to *Conn.
 func NewConn(conn net.Conn) (*Conn, error) {
 	if conn == nil {
 		return nil, errors.New("invalid conn: nil")

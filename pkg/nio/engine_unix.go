@@ -55,9 +55,9 @@ func (g *Engine) Start() error {
 	g.Timer.Start()
 
 	if len(g.addrs) == 0 {
-		log.Infof("NBIO[%v] start", g.Name)
+		log.Infof("NIO-SERVER[%v] start", g.Name)
 	} else {
-		log.Infof("NBIO[%v] start listen on: [\"%v@%v\"]", g.Name, g.network, strings.Join(g.addrs, `", "`))
+		log.Infof("NIO-SERVER[%v] start listen on: [\"%v@%v\"]", g.Name, g.network, strings.Join(g.addrs, `", "`))
 	}
 	return nil
 }
@@ -66,7 +66,7 @@ func (g *Engine) Start() error {
 func NewEngine(conf Config) *Engine {
 	cpuNum := runtime.NumCPU()
 	if conf.Name == "" {
-		conf.Name = "NB"
+		conf.Name = "NIO"
 	}
 	if conf.NPoller <= 0 {
 		conf.NPoller = cpuNum
