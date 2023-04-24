@@ -4,7 +4,9 @@ package nio
 
 import (
 	"errors"
+	standardError "goredis/pkg/errors"
 	"goredis/pkg/pool/bytepool"
+	"goredis/pkg/utils/timer"
 	"net"
 	"sync"
 	"syscall"
@@ -86,7 +88,7 @@ func (c *Conn) ReadAndGetConn(b []byte) (*Conn, int, error) {
 
 func (c *Conn) doRead(b []byte) (*Conn, int, error) {
 	switch c.typ {
-	//in tcp and unix conn
+	//tcp 和 unix
 	case ConnTypeTCP, ConnTypeUnix:
 		return c.readStream(b)
 	default:
@@ -95,8 +97,8 @@ func (c *Conn) doRead(b []byte) (*Conn, int, error) {
 }
 
 func (c *Conn) readStream(b []byte) (*Conn, int, error) {
-	nread, err := syscall.Read(c.fd, b)
-	return c, nread, err
+	nRead, err := syscall.Read(c.fd, b)
+	return c, nRead, err
 }
 
 // Write implements Write.
@@ -199,12 +201,12 @@ func (c *Conn) SetDeadline(t time.Time) error {
 			g := c.p.g
 			now := time.Now()
 			if c.rTimer == nil {
-				c.rTimer = g.AfterFunc(t.Sub(now), func() { c.closeWithError(errReadTimeout) })
+				c.rTimer = g.AfterFunc(t.Sub(now), func() { c.closeWithError(getError("read timeout")) })
 			} else {
 				c.rTimer.Reset(t.Sub(now))
 			}
 			if c.wTimer == nil {
-				c.wTimer = g.AfterFunc(t.Sub(now), func() { c.closeWithError(errWriteTimeout) })
+				c.wTimer = g.AfterFunc(t.Sub(now), func() { c.closeWithError(getError("write timeout")) })
 			} else {
 				c.wTimer.Reset(t.Sub(now))
 			}
@@ -238,29 +240,51 @@ func (c *Conn) setDeadline(timer **timer.Item, returnErr error, t time.Time) err
 		}
 	} else if *timer != nil {
 		(*timer).Stop()
-		(*timer) = nil
+		*timer = nil
 	}
 	return nil
 }
 
 // SetReadDeadline implements SetReadDeadline.
 func (c *Conn) SetReadDeadline(t time.Time) error {
-	return c.setDeadline(&c.rTimer, errReadTimeout, t)
+	return c.setDeadline(&c.rTimer, getError("read timeout"), t)
 }
 
 // SetWriteDeadline implements SetWriteDeadline.
 func (c *Conn) SetWriteDeadline(t time.Time) error {
-	return c.setDeadline(&c.wTimer, errWriteTimeout, t)
+	return c.setDeadline(&c.wTimer, getError("write timeout"), t)
+}
+
+//封装错误
+func getError(errStr string) error {
+	return standardError.NewStandardError(errStr)
+}
+
+// SetNoDelay implements SetNoDelay.
+func (c *Conn) SetNoDelay(noDelay bool) error {
+	return SetNoDelay(c.fd, noDelay)
 }
 
 // SetReadBuffer implements SetReadBuffer.
 func (c *Conn) SetReadBuffer(bytes int) error {
-	return syscall.SetsockoptInt(c.fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF, bytes)
+	return SetReadBuffer(c.fd, bytes)
 }
 
 // SetWriteBuffer implements SetWriteBuffer.
 func (c *Conn) SetWriteBuffer(bytes int) error {
-	return syscall.SetsockoptInt(c.fd, syscall.SOL_SOCKET, syscall.SO_SNDBUF, bytes)
+	return SetWriteBuffer(c.fd, bytes)
+}
+
+func (c *Conn) SetKeepAlive(keepalive bool, d time.Duration) error {
+	if keepalive {
+		return SetKeepAlive(c.fd, int(d.Seconds()), keepalive)
+	} else {
+		return SetKeepAlive(c.fd, 0, keepalive)
+	}
+}
+
+func (c *Conn) SetLinger(onOff int32, linger int32) error {
+	return SetLinger(c.fd, onOff, linger)
 }
 
 // Session returns user session.
@@ -452,7 +476,7 @@ func (c *Conn) closeWithErrorWithoutLock(err error) error {
 	c.closeErr = err
 
 	if c.writeBuffer != nil {
-		mempool.Free(c.writeBuffer)
+		bytepool.Free(c.writeBuffer)
 		c.writeBuffer = nil
 	}
 

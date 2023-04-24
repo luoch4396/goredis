@@ -2,7 +2,7 @@ package nio
 
 import "syscall"
 
-func SetKeepAlive(flag bool, fd, sec int) error {
+func SetKeepAlive(fd, sec int, flag bool) error {
 	//禁用TCP_KEEPALIVE
 	if !flag {
 		if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_KEEPALIVE, 0); err != nil {

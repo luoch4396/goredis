@@ -27,6 +27,59 @@ type poll struct {
 	g            *Engine
 }
 
+func newPoll(g *Engine, isListener bool, index int) (*poll, error) {
+	if isListener {
+		if len(g.addrs) == 0 {
+			panic("invalid listener num")
+		}
+
+		addr := g.addrs[index%len(g.addrs)]
+		ln, err := g.listen(g.network, addr)
+		if err != nil {
+			return nil, err
+		}
+
+		p := &poll{
+			g:          g,
+			index:      index,
+			listener:   ln,
+			isListener: isListener,
+			pollType:   "LISTENER",
+		}
+		if g.network == "unix" {
+			p.unixSockAddr = addr
+		}
+
+		return p, nil
+	}
+
+	fd, err := syscall.Kqueue()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = syscall.Kevent(fd, []syscall.Kevent_t{{
+		Ident:  0,
+		Filter: syscall.EVFILT_USER,
+		Flags:  syscall.EV_ADD | syscall.EV_CLEAR,
+	}}, nil, nil)
+
+	if err != nil {
+		syscall.Close(fd)
+		return nil, err
+	}
+
+	p := &poll{
+		g:          g,
+		eventFd:    fd,
+		index:      index,
+		isListener: isListener,
+		pollType:   "KQUEUE-POLL",
+	}
+
+	return p, nil
+}
+
 func (p *poll) addConn(c *Conn) {
 	fd := c.fd
 	if fd >= len(p.g.connsUnix) {
@@ -40,7 +93,6 @@ func (p *poll) addConn(c *Conn) {
 
 func (p *poll) getConn(fd int) *Conn {
 	return p.g.connsUnix[fd]
-	return nil
 }
 
 //删除连接
@@ -48,10 +100,6 @@ func (p *poll) deleteConn(c *Conn) {
 	if c == nil {
 		return
 	}
-}
-
-func (p *poll) accept() error {
-	return nil
 }
 
 func (p *poll) trigger() error {
@@ -82,7 +130,6 @@ func (p *poll) acceptLoop() {
 				conn.Close()
 				continue
 			}
-			//p.g.pollers[c.Hash()%len(p.g.pollers)].addConn(c)
 		} else {
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
 				log.Errorf("kqueuePoll[%v][%v_%v] Accept failed: temporary error, will be retrying ...", p.pollType, p.index)
@@ -132,6 +179,7 @@ func (p *poll) readWrite(ev *syscall.Kevent_t) {
 		if ev.Filter&syscall.EVFILT_READ == syscall.EVFILT_READ {
 			if p.g.onRead == nil {
 				for {
+					buffer := p.g.borrow(c)
 					rc, n, err := c.ReadAndGetConn(buffer)
 					if n > 0 {
 						p.g.onData(rc, buffer[:n])
@@ -193,6 +241,13 @@ func (p *poll) modRead(fd int) {
 func (p *poll) modWrite(fd int) {
 	p.mux.Lock()
 	p.eventList = append(p.eventList, syscall.Kevent_t{Ident: uint64(fd), Flags: syscall.EV_ADD, Filter: syscall.EVFILT_WRITE})
+	p.mux.Unlock()
+	p.trigger()
+}
+
+func (p *poll) addRead(fd int) {
+	p.mux.Lock()
+	p.eventList = append(p.eventList, syscall.Kevent_t{Ident: uint64(fd), Flags: syscall.EV_ADD, Filter: syscall.EVFILT_READ})
 	p.mux.Unlock()
 	p.trigger()
 }

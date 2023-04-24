@@ -52,7 +52,7 @@ func GetMetricsInfo(metricsNames ...string) map[string]string {
 		case metrics.KindBad:
 			panic("unexpected or unsupported metric")
 		case metrics.KindFloat64Histogram:
-			//TODO: 未解析
+			//TODO: 未解析，暂时不需要
 			//unit := m.Name[strings.IndexRune(m.Name, ':')+1:]
 			//RuntimeMetricsBucketsForUnit(m.Value.Float64Histogram().Buckets, unit)
 		case metrics.KindUint64:

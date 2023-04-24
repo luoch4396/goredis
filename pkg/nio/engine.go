@@ -3,6 +3,7 @@ package nio
 import (
 	"context"
 	"goredis/pkg/log"
+	"goredis/pkg/utils/timer"
 	"net"
 	"sync"
 	"time"
@@ -17,58 +18,12 @@ const (
 
 	// DefaultMaxConnReadTimesPerEventLoop .
 	DefaultMaxConnReadTimesPerEventLoop = 3
-
-	// DefaultUDPReadTimeout .
-	DefaultUDPReadTimeout = 120 * time.Second
 )
 
 var (
 	// MaxOpenFiles .
 	MaxOpenFiles = 1024 * 1024 * 2
 )
-
-// Config Of Engine.
-type Config struct {
-	Name string
-
-	// Network is the listening protocol, used with Addrs together.
-	// tcp* supported only by now, there's no plan for other protocol such as udp,
-	// because it's too easy to write udp server/client.
-	Network string
-
-	// Addrs is the listening addr list for a nbio server.
-	// if it is empty, no listener created, then the Engine is used for client by default.
-	Addrs []string
-
-	// NPoller represents poller goroutine num, it's set to runtime.NumCPU() by default.
-	NPoller int
-
-	// ReadBufferSize represents buffer size for reading, it's set to 16k by default.
-	ReadBufferSize int
-
-	// MaxWriteBufferSize represents max write buffer size for Conn, it's set to 1m by default.
-	// if the connection's Send-Q is full and the data cached by nbio is
-	// more than MaxWriteBufferSize, the connection would be closed by nbio.
-	MaxWriteBufferSize int
-
-	// MaxConnReadTimesPerEventLoop represents max read times in one poller loop for one fd
-	MaxConnReadTimesPerEventLoop int
-
-	// LockListener represents listener's goroutine to lock thread or not, it's set to false by default.
-	LockListener bool
-
-	// LockPoller represents poller's goroutine to lock thread or not, it's set to false by default.
-	LockPoller bool
-
-	// EpollMod sets the epoll mod, EPOLLLT by default.
-	EpollMod uint32
-
-	// TimerExecute sets the executor for timer callbacks.
-	TimerExecute func(f func())
-
-	// Listen is used to create listener for Engine.
-	Listen func(network, addr string) (net.Listener, error)
-}
 
 // Engine is a manager of poller.
 type Engine struct {
@@ -84,10 +39,9 @@ type Engine struct {
 
 	wgConn sync.WaitGroup
 
-	network   string
-	addrs     []string
-	listen    func(network, addr string) (net.Listener, error)
-	listenUDP func(network string, laddr *net.UDPAddr) (*net.UDPConn, error)
+	network string
+	addrs   []string
+	listen  func(network, addr string) (net.Listener, error)
 
 	pollerNum                    int
 	readBufferSize               int
@@ -109,11 +63,10 @@ type Engine struct {
 	onData            func(c *Conn, data []byte)
 	onReadBufferAlloc func(c *Conn) []byte
 	onReadBufferFree  func(c *Conn, buffer []byte)
-	// onWriteBufferFree func(c *Conn, buffer []byte)
-	beforeRead  func(c *Conn)
-	afterRead   func(c *Conn)
-	beforeWrite func(c *Conn)
-	onStop      func()
+	beforeRead        func(c *Conn)
+	afterRead         func(c *Conn)
+	beforeWrite       func(c *Conn)
+	onStop            func()
 }
 
 // Stop closes listeners/pollers/conns/timer.
@@ -179,7 +132,7 @@ func (g *Engine) Shutdown(ctx context.Context) error {
 
 // AddConn adds conn to a poller.
 func (g *Engine) AddConn(conn net.Conn) (*Conn, error) {
-	c, err := Conn(conn)
+	c, err := NewConn(conn)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ package nio
 
 import (
 	"goredis/pkg/log"
+	"goredis/pkg/utils/timer"
 	"net"
 	"runtime"
 	"strings"
@@ -27,7 +28,7 @@ func (g *Engine) Start() error {
 	}
 
 	for i := 0; i < g.pollerNum; i++ {
-		p, err := NewPool(g, false, i)
+		p, err := newPoll(g, false, i)
 		if err != nil {
 			for j := 0; j < len(g.listeners); j++ {
 				g.listeners[j].stop()

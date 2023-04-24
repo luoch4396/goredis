@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-// DoPingCmd ping/pong
+/**/ // DoPingCmd ping/pong
 func DoPingCmd(args [][]byte) tcp.Info {
 	if len(args) == 0 {
 		return &exchange.PongResponse{}
