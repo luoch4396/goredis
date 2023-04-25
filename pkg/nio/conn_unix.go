@@ -4,7 +4,6 @@ package nio
 
 import (
 	"errors"
-	standardError "goredis/pkg/errors"
 	"goredis/pkg/pool/bytepool"
 	"goredis/pkg/utils/timer"
 	"net"
@@ -247,17 +246,12 @@ func (c *Conn) setDeadline(timer **timer.Item, returnErr error, t time.Time) err
 
 // SetReadDeadline implements SetReadDeadline.
 func (c *Conn) SetReadDeadline(t time.Time) error {
-	return c.setDeadline(&c.rTimer, getError("read timeout"), t)
+	return c.setDeadline(&c.rTimer, getError("kqueue read timeout"), t)
 }
 
 // SetWriteDeadline implements SetWriteDeadline.
 func (c *Conn) SetWriteDeadline(t time.Time) error {
-	return c.setDeadline(&c.wTimer, getError("write timeout"), t)
-}
-
-//封装错误
-func getError(errStr string) error {
-	return standardError.NewStandardError(errStr)
+	return c.setDeadline(&c.wTimer, getError("kqueue write timeout"), t)
 }
 
 // SetNoDelay implements SetNoDelay.
@@ -374,7 +368,6 @@ func (c *Conn) flush() error {
 			copy(c.writeBuffer, old[n:])
 			bytepool.Free(old)
 		}
-		// c.modWrite()
 	} else {
 		bytepool.Free(old)
 		c.writeBuffer = nil

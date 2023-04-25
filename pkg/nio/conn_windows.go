@@ -3,6 +3,7 @@ package nio
 import (
 	"bytes"
 	"errors"
+	"goredis/pkg/utils/timer"
 	"io"
 	"net"
 	"sync"
@@ -11,7 +12,7 @@ import (
 
 // Conn wraps net.Conn.
 type Conn struct {
-	p *poller
+	p *poll
 
 	hash int
 
@@ -94,18 +95,8 @@ func (c *Conn) readTCP(b []byte) (int, error) {
 
 // Write wraps net.Conn.Write.
 func (c *Conn) Write(b []byte) (int, error) {
-	var err error
-	var nwrite int
-	switch c.typ {
-	case ConnTypeTCP:
-		nwrite, err = c.writeTCP(b)
-	case ConnTypeUDPServer:
-	case ConnTypeUDPClientFromDial:
-		nwrite, err = c.writeUDPClientFromDial(b)
-	case ConnTypeUDPClientFromRead:
-		nwrite, err = c.writeUDPClientFromRead(b)
-	default:
-	}
+	//TCP
+	nwrite, err := c.writeTCP(b)
 	return nwrite, err
 }
 
@@ -123,42 +114,8 @@ func (c *Conn) writeTCP(b []byte) (int, error) {
 	return nwrite, err
 }
 
-func (c *Conn) writeUDPClientFromDial(b []byte) (int, error) {
-	nwrite, err := c.connUDP.Write(b)
-	if err != nil {
-		if c.closeErr == nil {
-			c.closeErr = err
-		}
-		c.Close()
-	}
-	return nwrite, err
-}
-
-func (c *Conn) writeUDPClientFromRead(b []byte) (int, error) {
-	nwrite, err := c.connUDP.WriteToUDP(b, c.connUDP.rAddr)
-	if err != nil {
-		if c.closeErr == nil {
-			c.closeErr = err
-		}
-		c.Close()
-	}
-	return nwrite, err
-}
-
 // Writev wraps buffers.WriteTo/syscall.Writev.
 func (c *Conn) Writev(in [][]byte) (int, error) {
-	if c.connUDP == nil {
-		buffers := net.Buffers(in)
-		nwrite, err := buffers.WriteTo(c.conn)
-		if err != nil {
-			if c.closeErr == nil {
-				c.closeErr = err
-			}
-			c.Close()
-		}
-		return int(nwrite), err
-	}
-
 	var total = 0
 	for _, b := range in {
 		nwrite, err := c.Write(b)
@@ -191,8 +148,6 @@ func (c *Conn) Close() error {
 		switch c.typ {
 		case ConnTypeTCP:
 			err = c.conn.Close()
-		case ConnTypeUDPServer, ConnTypeUDPClientFromDial, ConnTypeUDPClientFromRead:
-			err = c.connUDP.Close()
 		default:
 		}
 
@@ -219,8 +174,6 @@ func (c *Conn) LocalAddr() net.Addr {
 	switch c.typ {
 	case ConnTypeTCP:
 		return c.conn.LocalAddr()
-	case ConnTypeUDPServer, ConnTypeUDPClientFromDial, ConnTypeUDPClientFromRead:
-		return c.connUDP.LocalAddr()
 	default:
 	}
 	return nil
@@ -228,16 +181,8 @@ func (c *Conn) LocalAddr() net.Addr {
 
 // RemoteAddr wraps net.Conn.RemoteAddr.
 func (c *Conn) RemoteAddr() net.Addr {
-	switch c.typ {
-	case ConnTypeTCP:
-		return c.conn.RemoteAddr()
-	case ConnTypeUDPClientFromDial:
-		return c.connUDP.RemoteAddr()
-	case ConnTypeUDPClientFromRead:
-		return c.connUDP.rAddr
-	default:
-	}
-	return nil
+	//tcp
+	return c.conn.RemoteAddr()
 }
 
 // SetDeadline wraps net.Conn.SetDeadline.
@@ -261,7 +206,7 @@ func (c *Conn) SetReadDeadline(t time.Time) error {
 	timeout := time.Until(t)
 	if c.rTimer == nil {
 		c.rTimer = c.p.g.AfterFunc(timeout, func() {
-			c.CloseWithError(errReadTimeout)
+			c.CloseWithError(getError("std iocp read timeout"))
 		})
 	} else {
 		c.rTimer.Reset(timeout)

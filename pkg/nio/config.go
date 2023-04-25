@@ -46,5 +46,6 @@ type Config struct {
 	// Listen is used to create listener for Engine.
 	Listen func(network, addr string) (net.Listener, error)
 
+	// MaxOpenFiles unix sock open files
 	MaxOpenFiles int64
 }

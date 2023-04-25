@@ -1,6 +1,7 @@
 package nio
 
 import (
+	"goredis/pkg/errors"
 	"goredis/pkg/log"
 )
 
@@ -8,17 +9,19 @@ import (
 type ConnType = int8
 
 const (
-	// ConnTypeTCP .
+	// ConnTypeTCP tcp socket
 	ConnTypeTCP ConnType = iota + 1
-	// ConnTypeUDPServer .
-	ConnTypeUDPServer
-	// ConnTypeUDPClientFromRead .
-	ConnTypeUDPClientFromRead
-	// ConnTypeUDPClientFromDial .
-	ConnTypeUDPClientFromDial
-	// ConnTypeUnix .
+	xx
+	xxx
+	xxxx
+	// ConnTypeUnix unix socket
 	ConnTypeUnix
 )
+
+// 封装错误
+func getError(errStr string) error {
+	return errors.NewStandardError(errStr)
+}
 
 // Type .
 func (c *Conn) Type() ConnType {
@@ -30,7 +33,7 @@ func (c *Conn) IsTCP() bool {
 	return c.typ == ConnTypeTCP
 }
 
-// IsUnix .
+// IsUnix FOR UNIX CONN
 func (c *Conn) IsUnix() bool {
 	return c.typ == ConnTypeUnix
 }
