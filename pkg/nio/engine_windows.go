@@ -1,13 +1,10 @@
-// Copyright 2020 lesismal. All rights reserved.
-// Use of this source code is governed by an MIT-style
-// license that can be found in the LICENSE file.
-
 package nio
 
 import (
+	"goredis/pkg/log"
+	"goredis/pkg/utils/timer"
 	"net"
 	"runtime"
-	"strings"
 )
 
 // Start init and start pollers.
@@ -54,9 +51,9 @@ func (g *Engine) Start() error {
 	g.Timer.Start()
 
 	if len(g.addrs) == 0 {
-		log.Infof("NIO-SERVER[%v] start", g.Name)
+		log.Infof("NIO-IOCP-SERVER %v start", g.Name)
 	} else {
-		log.Infof("NIO-SERVER[%v] start listen on: [\"%v@%v\"]", g.Name, g.network, strings.Join(g.addrs, `", "`))
+		log.Infof("NIO-IOCP-SERVER ", g.Name, "start listen on: ", g.network)
 	}
 	return nil
 }
@@ -65,7 +62,7 @@ func (g *Engine) Start() error {
 func NewEngine(conf Config) *Engine {
 	cpuNum := runtime.NumCPU()
 	if conf.Name == "" {
-		conf.Name = "NIO"
+		conf.Name = "NIO-IOCP"
 	}
 	if conf.NPoller <= 0 {
 		conf.NPoller = cpuNum
@@ -75,9 +72,6 @@ func NewEngine(conf Config) *Engine {
 	}
 	if conf.Listen == nil {
 		conf.Listen = net.Listen
-	}
-	if conf.ListenUDP == nil {
-		conf.ListenUDP = net.ListenUDP
 	}
 
 	g := &Engine{
@@ -91,8 +85,8 @@ func NewEngine(conf Config) *Engine {
 		maxWriteBufferSize: conf.MaxWriteBufferSize,
 		lockListener:       conf.LockListener,
 		lockPoller:         conf.LockPoller,
-		listeners:          make([]*poller, len(conf.Addrs))[0:0],
-		pollers:            make([]*poller, conf.NPoller),
+		listeners:          make([]*poll, len(conf.Addrs))[0:0],
+		pollers:            make([]*poll, conf.NPoller),
 		connsStd:           map[*Conn]struct{}{},
 	}
 

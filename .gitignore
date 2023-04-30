@@ -19,4 +19,6 @@ logs
 # jetbrains
 .idea
 *.iml
+#test file
+*.file
 

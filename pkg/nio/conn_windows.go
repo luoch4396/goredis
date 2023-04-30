@@ -93,7 +93,7 @@ func (c *Conn) readTCP(b []byte) (int, error) {
 	return nread, err
 }
 
-// Write wraps net.Conn.Write.
+// Write from net.Conn.Write.
 func (c *Conn) Write(b []byte) (int, error) {
 	//TCP
 	nwrite, err := c.writeTCP(b)
@@ -114,7 +114,7 @@ func (c *Conn) writeTCP(b []byte) (int, error) {
 	return nwrite, err
 }
 
-// Writev wraps buffers.WriteTo/syscall.Writev.
+// Writev from buffers.WriteTo/syscall.Writev.
 func (c *Conn) Writev(in [][]byte) (int, error) {
 	var total = 0
 	for _, b := range in {
@@ -133,7 +133,7 @@ func (c *Conn) Writev(in [][]byte) (int, error) {
 	return total, nil
 }
 
-// Close wraps net.Conn.Close.
+// Close from net.Conn.Close.
 func (c *Conn) Close() error {
 	var err error
 	c.mux.Lock()
@@ -161,7 +161,6 @@ func (c *Conn) Close() error {
 	return err
 }
 
-// CloseWithError .
 func (c *Conn) CloseWithError(err error) error {
 	if c.closeErr == nil {
 		c.closeErr = err
@@ -169,7 +168,7 @@ func (c *Conn) CloseWithError(err error) error {
 	return c.Close()
 }
 
-// LocalAddr wraps net.Conn.LocalAddr.
+// LocalAddr from net.Conn.LocalAddr.
 func (c *Conn) LocalAddr() net.Addr {
 	switch c.typ {
 	case ConnTypeTCP:
@@ -179,13 +178,13 @@ func (c *Conn) LocalAddr() net.Addr {
 	return nil
 }
 
-// RemoteAddr wraps net.Conn.RemoteAddr.
+// RemoteAddr from net.Conn.RemoteAddr.
 func (c *Conn) RemoteAddr() net.Addr {
 	//tcp
 	return c.conn.RemoteAddr()
 }
 
-// SetDeadline wraps net.Conn.SetDeadline.
+// SetDeadline from net.Conn.SetDeadline.
 func (c *Conn) SetDeadline(t time.Time) error {
 	if c.typ == ConnTypeTCP {
 		return c.conn.SetDeadline(t)
@@ -193,7 +192,7 @@ func (c *Conn) SetDeadline(t time.Time) error {
 	return c.SetReadDeadline(t)
 }
 
-// SetReadDeadline wraps net.Conn.SetReadDeadline.
+// SetReadDeadline from net.Conn.SetReadDeadline.
 func (c *Conn) SetReadDeadline(t time.Time) error {
 	if t.IsZero() {
 		t = time.Now().Add(timer.TimeForever)
@@ -215,7 +214,7 @@ func (c *Conn) SetReadDeadline(t time.Time) error {
 	return nil
 }
 
-// SetWriteDeadline wraps net.Conn.SetWriteDeadline.
+// SetWriteDeadline from net.Conn.SetWriteDeadline.
 func (c *Conn) SetWriteDeadline(t time.Time) error {
 	if c.typ != ConnTypeTCP {
 		return nil
@@ -228,20 +227,20 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 	return c.conn.SetWriteDeadline(t)
 }
 
-// SetNoDelay wraps net.Conn.SetNoDelay.
-func (c *Conn) SetNoDelay(nodelay bool) error {
+// SetNoDelay from net.Conn.SetNoDelay.
+func (c *Conn) SetNoDelay(noDelay bool) error {
 	if c.typ != ConnTypeTCP {
 		return nil
 	}
 
 	conn, ok := c.conn.(*net.TCPConn)
 	if ok {
-		return conn.SetNoDelay(nodelay)
+		return conn.SetNoDelay(noDelay)
 	}
 	return nil
 }
 
-// SetReadBuffer wraps net.Conn.SetReadBuffer.
+// SetReadBuffer from net.Conn.SetReadBuffer.
 func (c *Conn) SetReadBuffer(bytes int) error {
 	if c.typ != ConnTypeTCP {
 		return nil
@@ -254,7 +253,7 @@ func (c *Conn) SetReadBuffer(bytes int) error {
 	return nil
 }
 
-// SetWriteBuffer wraps net.Conn.SetWriteBuffer.
+// SetWriteBuffer from net.Conn.SetWriteBuffer.
 func (c *Conn) SetWriteBuffer(bytes int) error {
 	if c.typ != ConnTypeTCP {
 		return nil
@@ -267,7 +266,7 @@ func (c *Conn) SetWriteBuffer(bytes int) error {
 	return nil
 }
 
-// SetKeepAlive wraps net.Conn.SetKeepAlive.
+// SetKeepAlive from net.Conn.SetKeepAlive.
 func (c *Conn) SetKeepAlive(keepalive bool) error {
 	if c.typ != ConnTypeTCP {
 		return nil
@@ -280,7 +279,7 @@ func (c *Conn) SetKeepAlive(keepalive bool) error {
 	return nil
 }
 
-// SetKeepAlivePeriod wraps net.Conn.SetKeepAlivePeriod.
+// SetKeepAlivePeriod from net.Conn.SetKeepAlivePeriod.
 func (c *Conn) SetKeepAlivePeriod(d time.Duration) error {
 	if c.typ != ConnTypeTCP {
 		return nil
@@ -293,8 +292,8 @@ func (c *Conn) SetKeepAlivePeriod(d time.Duration) error {
 	return nil
 }
 
-// SetLinger wraps net.Conn.SetLinger.
-func (c *Conn) SetLinger(onoff int32, linger int32) error {
+// SetLinger from net.Conn.SetLinger.
+func (c *Conn) SetLinger(onOff int32, linger int32) error {
 	if c.typ != ConnTypeTCP {
 		return nil
 	}
