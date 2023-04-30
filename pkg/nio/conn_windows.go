@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Conn wraps net.Conn.
+// Conn form net.Conn. all func is supported tcp conn and fit in redis tcp server
 type Conn struct {
 	p *poll
 
@@ -61,14 +61,7 @@ func (c *Conn) Read(b []byte) (int, error) {
 }
 
 func (c *Conn) read(b []byte) (int, error) {
-	var err error
-	var nread int
-	switch c.typ {
-	case ConnTypeTCP:
-		nread, err = c.readTCP(b)
-	default:
-	}
-	return nread, err
+	return c.readTCP(b)
 }
 
 func (c *Conn) readTCP(b []byte) (int, error) {
@@ -144,13 +137,7 @@ func (c *Conn) Close() error {
 			c.rTimer.Stop()
 			c.rTimer = nil
 		}
-
-		switch c.typ {
-		case ConnTypeTCP:
-			err = c.conn.Close()
-		default:
-		}
-
+		err = c.conn.Close()
 		c.mux.Unlock()
 		if c.p.g != nil {
 			c.p.deleteConn(c)
@@ -170,12 +157,7 @@ func (c *Conn) CloseWithError(err error) error {
 
 // LocalAddr from net.Conn.LocalAddr.
 func (c *Conn) LocalAddr() net.Addr {
-	switch c.typ {
-	case ConnTypeTCP:
-		return c.conn.LocalAddr()
-	default:
-	}
-	return nil
+	return c.conn.LocalAddr()
 }
 
 // RemoteAddr from net.Conn.RemoteAddr.
@@ -186,10 +168,7 @@ func (c *Conn) RemoteAddr() net.Addr {
 
 // SetDeadline from net.Conn.SetDeadline.
 func (c *Conn) SetDeadline(t time.Time) error {
-	if c.typ == ConnTypeTCP {
-		return c.conn.SetDeadline(t)
-	}
-	return c.SetReadDeadline(t)
+	return c.conn.SetDeadline(t)
 }
 
 // SetReadDeadline from net.Conn.SetReadDeadline.
@@ -197,42 +176,19 @@ func (c *Conn) SetReadDeadline(t time.Time) error {
 	if t.IsZero() {
 		t = time.Now().Add(timer.TimeForever)
 	}
-
-	if c.typ == ConnTypeTCP {
-		return c.conn.SetReadDeadline(t)
-	}
-
-	timeout := time.Until(t)
-	if c.rTimer == nil {
-		c.rTimer = c.p.g.AfterFunc(timeout, func() {
-			c.CloseWithError(getError("std iocp read timeout"))
-		})
-	} else {
-		c.rTimer.Reset(timeout)
-	}
-
-	return nil
+	return c.conn.SetReadDeadline(t)
 }
 
 // SetWriteDeadline from net.Conn.SetWriteDeadline.
 func (c *Conn) SetWriteDeadline(t time.Time) error {
-	if c.typ != ConnTypeTCP {
-		return nil
-	}
-
 	if t.IsZero() {
 		t = time.Now().Add(timer.TimeForever)
 	}
-
 	return c.conn.SetWriteDeadline(t)
 }
 
 // SetNoDelay from net.Conn.SetNoDelay.
 func (c *Conn) SetNoDelay(noDelay bool) error {
-	if c.typ != ConnTypeTCP {
-		return nil
-	}
-
 	conn, ok := c.conn.(*net.TCPConn)
 	if ok {
 		return conn.SetNoDelay(noDelay)
@@ -242,10 +198,6 @@ func (c *Conn) SetNoDelay(noDelay bool) error {
 
 // SetReadBuffer from net.Conn.SetReadBuffer.
 func (c *Conn) SetReadBuffer(bytes int) error {
-	if c.typ != ConnTypeTCP {
-		return nil
-	}
-
 	conn, ok := c.conn.(*net.TCPConn)
 	if ok {
 		return conn.SetReadBuffer(bytes)
@@ -255,10 +207,6 @@ func (c *Conn) SetReadBuffer(bytes int) error {
 
 // SetWriteBuffer from net.Conn.SetWriteBuffer.
 func (c *Conn) SetWriteBuffer(bytes int) error {
-	if c.typ != ConnTypeTCP {
-		return nil
-	}
-
 	conn, ok := c.conn.(*net.TCPConn)
 	if ok {
 		return conn.SetWriteBuffer(bytes)
@@ -267,37 +215,20 @@ func (c *Conn) SetWriteBuffer(bytes int) error {
 }
 
 // SetKeepAlive from net.Conn.SetKeepAlive.
-func (c *Conn) SetKeepAlive(keepalive bool) error {
-	if c.typ != ConnTypeTCP {
-		return nil
-	}
-
+func (c *Conn) SetKeepAlive(keepalive bool, d time.Duration) error {
 	conn, ok := c.conn.(*net.TCPConn)
 	if ok {
-		return conn.SetKeepAlive(keepalive)
-	}
-	return nil
-}
-
-// SetKeepAlivePeriod from net.Conn.SetKeepAlivePeriod.
-func (c *Conn) SetKeepAlivePeriod(d time.Duration) error {
-	if c.typ != ConnTypeTCP {
-		return nil
-	}
-
-	conn, ok := c.conn.(*net.TCPConn)
-	if ok {
-		return conn.SetKeepAlivePeriod(d)
+		if keepalive && d != 0 {
+			err := conn.SetKeepAlive(keepalive)
+			err = conn.SetKeepAlivePeriod(d)
+			return err
+		}
 	}
 	return nil
 }
 
 // SetLinger from net.Conn.SetLinger.
 func (c *Conn) SetLinger(onOff int32, linger int32) error {
-	if c.typ != ConnTypeTCP {
-		return nil
-	}
-
 	conn, ok := c.conn.(*net.TCPConn)
 	if ok {
 		return conn.SetLinger(int(linger))

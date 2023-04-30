@@ -84,8 +84,7 @@ func TestEcho(t *testing.T) {
 		}
 		c.SetLinger(1, 0)
 		c.SetNoDelay(true)
-		c.SetKeepAlive(true)
-		c.SetKeepAlivePeriod(time.Second * 60)
+		c.SetKeepAlive(true, time.Second*60)
 		c.SetDeadline(time.Now().Add(time.Second))
 		c.SetReadBuffer(1024 * 4)
 		c.SetWriteBuffer(1024 * 4)
