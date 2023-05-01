@@ -55,9 +55,9 @@ func dupStdConn(conn net.Conn) (*Conn, error) {
 
 	switch conn.(type) {
 	case *net.TCPConn:
-		c.typ = ConnTypeTCP
+		c.connType = ConnTypeTCP
 	case *net.UnixConn:
-		c.typ = ConnTypeUnix
+		c.connType = ConnTypeUnix
 	default:
 	}
 

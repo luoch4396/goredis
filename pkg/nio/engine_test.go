@@ -88,7 +88,7 @@ func TestEcho(t *testing.T) {
 		c.SetDeadline(time.Now().Add(time.Second))
 		c.SetReadBuffer(1024 * 4)
 		c.SetWriteBuffer(1024 * 4)
-		log.Printf("connected, local addr: %v, remote addr: %v", c.LocalAddr(), c.RemoteAddr())
+		log2.Debugf("connected, local addr: %v, remote addr: %v", c.LocalAddr(), c.RemoteAddr())
 	})
 	g.BeforeWrite(func(c *Conn) {
 		c.SetWriteDeadline(time.Now().Add(time.Second * 5))

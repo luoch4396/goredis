@@ -13,9 +13,6 @@ type ConnType = int8
 const (
 	// ConnTypeTCP tcp socket
 	ConnTypeTCP ConnType = iota + 1
-	xx
-	xxx
-	xxxx
 	// ConnTypeUnix unix socket
 	ConnTypeUnix
 )
@@ -27,17 +24,17 @@ func getError(errStr string) error {
 
 // Type .
 func (c *Conn) Type() ConnType {
-	return c.typ
+	return c.connType
 }
 
 // IsTCP .
 func (c *Conn) IsTCP() bool {
-	return c.typ == ConnTypeTCP
+	return c.connType == ConnTypeTCP
 }
 
 // IsUnix FOR UNIX CONN
 func (c *Conn) IsUnix() bool {
-	return c.typ == ConnTypeUnix
+	return c.connType == ConnTypeUnix
 }
 
 // OnData registers callback for data.

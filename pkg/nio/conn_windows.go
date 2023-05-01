@@ -251,7 +251,7 @@ func newConn(conn net.Conn) *Conn {
 	addr := conn.LocalAddr().String()
 
 	c.conn = conn
-	c.typ = ConnTypeTCP
+	c.connType = ConnTypeTCP
 
 	for _, ch := range addr {
 		c.hash = 31*c.hash + int(ch)

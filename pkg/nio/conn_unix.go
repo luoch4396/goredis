@@ -25,7 +25,7 @@ type Conn struct {
 
 	writeBuffer []byte
 
-	typ      ConnType
+	connType ConnType
 	closed   bool
 	isWAdded bool
 	closeErr error
@@ -86,13 +86,7 @@ func (c *Conn) ReadAndGetConn(b []byte) (*Conn, int, error) {
 }
 
 func (c *Conn) doRead(b []byte) (*Conn, int, error) {
-	switch c.typ {
-	//tcp 和 unix
-	case ConnTypeTCP, ConnTypeUnix:
-		return c.readStream(b)
-	default:
-	}
-	return c, 0, errors.New("invalid conn for reading")
+	return c.readStream(b)
 }
 
 func (c *Conn) readStream(b []byte) (*Conn, int, error) {
@@ -325,7 +319,7 @@ func (c *Conn) write(b []byte) (int, error) {
 			n = 0
 		}
 		left := len(b) - n
-		if left > 0 && c.typ == ConnTypeTCP {
+		if left > 0 && c.connType == ConnTypeTCP {
 			c.writeBuffer = bytepool.Malloc(left)
 			copy(c.writeBuffer, b[n:])
 			c.modWrite()
@@ -429,14 +423,7 @@ func (c *Conn) writev(in [][]byte) (int, error) {
 }
 
 func (c *Conn) doWrite(b []byte) (int, error) {
-	var err error
-	var nread int
-	switch c.typ {
-	case ConnTypeTCP, ConnTypeUnix:
-		nread, err = c.writeStream(b)
-	default:
-	}
-	return nread, err
+	return c.writeStream(b)
 }
 
 func (c *Conn) overflow(n int) bool {
@@ -484,13 +471,7 @@ func (c *Conn) closeWithErrorWithoutLock(err error) error {
 		c.p.deleteConn(c)
 	}
 
-	switch c.typ {
-	case ConnTypeTCP, ConnTypeUnix:
-		err = syscall.Close(c.fd)
-	default:
-	}
-
-	return err
+	return syscall.Close(c.fd)
 }
 
 func NewConn(conn net.Conn) (*Conn, error) {
