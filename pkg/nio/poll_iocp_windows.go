@@ -29,7 +29,7 @@ func (p *poll) accept() error {
 	}
 
 	c := newConn(conn)
-	o := p.g.pollers[c.Hash()%len(p.g.pollers)]
+	o := p.g.polls[c.Hash()%len(p.g.polls)]
 	o.addConn(c)
 
 	return nil

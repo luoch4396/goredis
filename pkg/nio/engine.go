@@ -55,7 +55,7 @@ type Engine struct {
 	connsUnix []*Conn
 
 	listeners []*poll
-	pollers   []*poll
+	polls     []*poll
 
 	onOpen            func(c *Conn)
 	onClose           func(c *Conn, err error)
@@ -107,7 +107,7 @@ func (g *Engine) Stop() {
 	g.Timer.Stop()
 
 	for i := 0; i < g.pollerNum; i++ {
-		g.pollers[i].stop()
+		g.polls[i].stop()
 	}
 
 	g.Wait()
@@ -137,7 +137,7 @@ func (g *Engine) AddConn(conn net.Conn) (*Conn, error) {
 		return nil, err
 	}
 
-	p := g.pollers[c.Hash()%len(g.pollers)]
+	p := g.polls[c.Hash()%len(g.polls)]
 	p.addConn(c)
 	return c, nil
 }
@@ -230,8 +230,8 @@ func (g *Engine) OnStop(h func()) {
 	g.onStop = h
 }
 
-// PollerBuffer returns Poller's buffer by Conn, can be used on linux/bsd.
-func (g *Engine) PollerBuffer(c *Conn) []byte {
+// PollBuffer returns Poll's buffer by Conn, can be used on linux/bsd.
+func (g *Engine) PollBuffer(c *Conn) []byte {
 	return c.p.ReadBuffer
 }
 
@@ -240,7 +240,7 @@ func (g *Engine) initHandlers() {
 	g.OnOpen(func(c *Conn) {})
 	g.OnClose(func(c *Conn, err error) {})
 	g.OnData(func(c *Conn, data []byte) {})
-	g.OnReadBufferAlloc(g.PollerBuffer)
+	g.OnReadBufferAlloc(g.PollBuffer)
 	g.OnReadBufferFree(func(c *Conn, buffer []byte) {})
 	g.BeforeRead(func(c *Conn) {})
 	g.AfterRead(func(c *Conn) {})

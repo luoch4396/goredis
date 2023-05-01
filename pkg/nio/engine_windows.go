@@ -33,16 +33,16 @@ func (g *Engine) Start() error {
 			}
 
 			for j := 0; j < i; j++ {
-				g.pollers[j].stop()
+				g.polls[j].stop()
 			}
 			return err
 		}
-		g.pollers[i] = p
+		g.polls[i] = p
 	}
 
 	for i := 0; i < g.pollerNum; i++ {
 		g.Add(1)
-		go g.pollers[i].start()
+		go g.polls[i].start()
 	}
 	for _, l := range g.listeners {
 		g.Add(1)
@@ -87,7 +87,7 @@ func NewEngine(conf Config) *Engine {
 		lockListener:       conf.LockListener,
 		lockPoller:         conf.LockPoller,
 		listeners:          make([]*poll, len(conf.Addrs))[0:0],
-		pollers:            make([]*poll, conf.NPoller),
+		polls:              make([]*poll, conf.NPoller),
 		connsStd:           map[*Conn]struct{}{},
 	}
 
