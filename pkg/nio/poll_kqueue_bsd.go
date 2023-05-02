@@ -132,11 +132,11 @@ func (p *poll) acceptLoop() {
 			}
 		} else {
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
-				log.Errorf("redisKqueuePoll[%v][%v_%v] Accept failed: temporary error, will be retrying ...", p.pollType, p.index)
+				log.Errorf("kqueue-poll[%v][%v_%v] Accept failed: temporary error, will be retrying ...", p.pollType, p.index)
 				time.Sleep(time.Second / 10)
 			} else {
 				if !p.shutdown {
-					log.Errorf("redisKqueuePoll[%v][%v_%v] Accept failed: %v, will be exited ...", p.pollType, p.index, err)
+					log.Errorf("kqueue-poll[%v][%v_%v] Accept failed: %v, will be exited ...", p.pollType, p.index, err)
 				}
 				break
 			}
@@ -220,7 +220,7 @@ func (p *poll) deleteEvent(fd int) {
 }
 
 func (p *poll) stop() {
-	log.Debugf("redisKqueuePoll[%v][%v_%v] stop...", p.pollType, p.index)
+	log.Debugf("kqueue-poll[%v][%v_%v] stop...", p.pollType, p.index)
 	p.shutdown = true
 	if p.listener != nil {
 		p.listener.Close()

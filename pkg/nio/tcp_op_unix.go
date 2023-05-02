@@ -2,24 +2,22 @@
 
 package nio
 
-import "syscall"
+import (
+	"goredis/pkg/utils"
+	"syscall"
+)
 
 func SetReadBuffer(fd, bytes int) error {
-	//接收
 	return syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF, bytes)
 }
 
 func SetWriteBuffer(fd, bytes int) error {
-	//发送
 	return syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_SNDBUF, bytes)
 }
 
 func SetNoDelay(fd int, noDelay bool) error {
 	//开启stream
-	if noDelay {
-		return syscall.SetsockoptInt(fd, syscall.IPPROTO_TCP, syscall.TCP_NODELAY, 1)
-	}
-	return syscall.SetsockoptInt(fd, syscall.IPPROTO_TCP, syscall.TCP_NODELAY, 0)
+	return syscall.SetsockoptInt(fd, syscall.IPPROTO_TCP, syscall.TCP_NODELAY, utils.BoolToInt(noDelay))
 }
 
 func SetLinger(fd int, onOff, linger int32) error {

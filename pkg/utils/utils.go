@@ -19,11 +19,12 @@ func NewStringBuilder(t ...string) string {
 	return builder.String()
 }
 
-// BytesToString no memory allocation api
+// BytesToString non memory copy api convert []byte to string
 func BytesToString(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
 
+// StringToBytes non memory copy api convert string to []byte
 func StringToBytes(s string) (b []byte) {
 	sh := (*reflect.StringHeader)(unsafe.Pointer(&s))
 	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
@@ -31,4 +32,11 @@ func StringToBytes(s string) (b []byte) {
 	bh.Len = sh.Len
 	bh.Cap = sh.Len
 	return b
+}
+
+func BoolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }

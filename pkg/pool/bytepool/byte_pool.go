@@ -111,10 +111,6 @@ func (a *NativeAllocator) Recycle(buf []byte, size int) []byte {
 	return newBuf
 }
 
-// Free .
-func (a *NativeAllocator) Free(buf []byte) {
-}
-
 // Malloc exports default package method.
 func Malloc(size int) []byte {
 	return DefaultBytePool.Malloc(size)

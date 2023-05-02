@@ -9,10 +9,10 @@ import (
 	"syscall"
 )
 
-// max send bytes of golang
+// max send file bytes of golang
 const maxSendfileSize = 4 << 20
 
-// Sendfile zero copy for unix
+// Sendfile is unix zero copy of send file io
 func (c *Conn) Sendfile(f *os.File, remain int64) (written int64, err error) {
 	if f == nil {
 		return 0, nil
@@ -59,6 +59,7 @@ func (c *Conn) Sendfile(f *os.File, remain int64) (written int64, err error) {
 			n = int(remain)
 		}
 		n, err = syscall.Sendfile(dst, src, nil, n)
+		//n, _, err := syscall.RawSyscall(syscall.SYS_SENDFILE, uintptr(dst), uintptr(unsafe.Pointer(&src)), uintptr(n))
 		if n > 0 {
 			remain -= int64(n)
 		} else if n == 0 && err == nil {

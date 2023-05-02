@@ -1,5 +1,5 @@
 package nio
 
-//type poll interface {
-//	accept() error
-//}
+type Poll interface {
+	newPoll(g *Engine, isListener bool, index int) (*poll, error)
+}

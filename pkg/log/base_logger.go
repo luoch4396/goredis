@@ -1,10 +1,10 @@
 package log
 
 import (
+	"goredis/pkg/utils"
 	"io"
 	"log"
 	"runtime"
-	"unsafe"
 )
 
 // FormatterLogger 日志模块定义
@@ -61,5 +61,5 @@ type LoggerBuilder struct {
 func MakeErrorLog(err any) {
 	buf := make([]byte, 32<<10)
 	buf = buf[:runtime.Stack(buf, false)]
-	Errorf("error occurs: %v\n%s", err, *(*string)(unsafe.Pointer(&buf)))
+	Errorf("error occurs: %v\n%s", err, utils.BytesToString(buf))
 }
