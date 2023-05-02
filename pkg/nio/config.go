@@ -37,7 +37,7 @@ type Config struct {
 	// LockPoller represents poller's goroutine to lock thread or not, it's set to false by default.
 	LockPoller bool
 
-	// EpollMod sets the epoll mod, EPOLLLT by default.
+	// EpollMod sets the epoll mod, EPOLLLT by default. LT/ET
 	EpollMod uint32
 
 	// TimerExecute sets the executor for timer callbacks.
