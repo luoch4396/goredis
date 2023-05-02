@@ -22,7 +22,7 @@ type Conn struct {
 
 	rTimer *timer.Item
 
-	typ      ConnType
+	connType ConnType
 	closed   bool
 	closeErr error
 
