@@ -52,8 +52,8 @@ func (p *poll) addConn(c *Conn) error {
 	p.g.mux.Lock()
 	p.g.connsStd[c] = struct{}{}
 	p.g.mux.Unlock()
-	// create a tcp conn
 	p.g.onOpen(c)
+	go p.readConn(c)
 	return nil
 }
 
@@ -61,6 +61,7 @@ func (p *poll) deleteConn(c *Conn) {
 	p.g.mux.Lock()
 	delete(p.g.connsStd, c)
 	p.g.mux.Unlock()
+	//关闭tcp连接
 	p.g.onClose(c, c.closeErr)
 }
 
@@ -71,8 +72,8 @@ func (p *poll) start() {
 	}
 	defer p.g.Done()
 
-	log.Debugf("redisTcpPoll[%v][%v_%v] start", p.g.Name, p.pollType, p.index)
-	defer log.Debugf("redisTcpPoll[%v][%v_%v] stopped", p.g.Name, p.pollType, p.index)
+	log.Debugf("iocp-poll[%v][%v_%v] start", p.g.Name, p.pollType, p.index)
+	defer log.Debugf("iocp-poll[%v][%v_%v] stopped", p.g.Name, p.pollType, p.index)
 
 	if p.isListener {
 		var err error
@@ -81,11 +82,11 @@ func (p *poll) start() {
 			err = p.accept()
 			if err != nil {
 				if ne, ok := err.(net.Error); ok && ne.Timeout() {
-					log.Errorf("redisTcpPoll[%v][%v_%v] Accept failed: temporary error, retrying...", p.g.Name, p.pollType, p.index)
+					log.Errorf("iocp-poll[%v][%v_%v] Accept failed: temporary error, retrying...", p.g.Name, p.pollType, p.index)
 					time.Sleep(time.Second / 20)
 				} else {
 					if !p.shutdown {
-						log.Errorf("redisTcpPoll[%v][%v_%v] Accept failed: %v, exit...", p.g.Name, p.pollType, p.index, err)
+						log.Errorf("iocp-poll[%v][%v_%v] Accept failed: %v, exit...", p.g.Name, p.pollType, p.index, err)
 					}
 					break
 				}
@@ -97,7 +98,7 @@ func (p *poll) start() {
 }
 
 func (p *poll) stop() {
-	log.Debugf("redisTcpPoll[%v][%v_%v] stop...", p.g.Name, p.pollType, p.index)
+	log.Debugf("iocp-poll[%v][%v_%v] stop...", p.g.Name, p.pollType, p.index)
 	p.shutdown = true
 	if p.isListener {
 		p.listener.Close()
@@ -120,9 +121,9 @@ func newPoller(g *Engine, isListener bool, index int) (*poll, error) {
 		if err != nil {
 			return nil, err
 		}
-		p.pollType = "listener"
+		p.pollType = "POLL-LISTENER"
 	} else {
-		p.pollType = "poll-std"
+		p.pollType = "POLL-IOCP"
 	}
 
 	return p, nil

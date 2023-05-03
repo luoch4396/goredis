@@ -52,9 +52,9 @@ func (g *Engine) Start() error {
 	g.Timer.Start()
 
 	if len(g.addrs) == 0 {
-		log.Infof("NIO-IOCP-SERVER %v start", g.Name)
+		log.Infof("NIO-SERVER-ENGINE %v start", g.Name)
 	} else {
-		log.Infof("NIO-SERVER[%v] start listen on: [\"%v@%v\"]", g.Name, g.network, strings.Join(g.addrs, `", "`))
+		log.Infof("NIO-SERVER-ENGINE[%v] start listen on: [\"%v@%v\"]", g.Name, g.network, strings.Join(g.addrs, `", "`))
 	}
 	return nil
 }
