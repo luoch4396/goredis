@@ -2,7 +2,9 @@ package nio
 
 import (
 	log2 "goredis/pkg/log"
+	"io"
 	"log"
+	"net"
 	"os"
 	"runtime"
 	"sync/atomic"
@@ -10,10 +12,12 @@ import (
 	"time"
 )
 
-var addr = "127.0.0.1:8848"
-var testfile = "test_nio_server.file"
+var addr = "127.0.0.1:8888"
+var testfile = "test.txt"
+var e *Engine
 
 func init() {
+	//日志
 	fs := &log2.FileSettings{
 		Path:     "logs",
 		FileName: "goredis",
@@ -62,6 +66,8 @@ func init() {
 	if err != nil {
 		log.Panicf("Start failed: %v\n", err)
 	}
+
+	e = g
 }
 
 func TestEcho(t *testing.T) {
@@ -88,7 +94,7 @@ func TestEcho(t *testing.T) {
 		c.SetDeadline(time.Now().Add(time.Second))
 		c.SetReadBuffer(1024 * 4)
 		c.SetWriteBuffer(1024 * 4)
-		log2.Debugf("connected, local addr: %v, remote addr: %v", c.LocalAddr(), c.RemoteAddr())
+		log.Printf("connected, local addr: %v, remote addr: %v", c.LocalAddr(), c.RemoteAddr())
 	})
 	g.BeforeWrite(func(c *Conn) {
 		c.SetWriteDeadline(time.Now().Add(time.Second * 5))
@@ -102,9 +108,6 @@ func TestEcho(t *testing.T) {
 
 	g.OnReadBufferAlloc(func(c *Conn) []byte {
 		return make([]byte, 1024)
-	})
-	g.OnReadBufferFree(func(c *Conn, b []byte) {
-
 	})
 
 	one := func(n int) {
@@ -129,4 +132,88 @@ func TestEcho(t *testing.T) {
 	}
 
 	<-done
+}
+
+func TestSendfile(t *testing.T) {
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		panic(err)
+	}
+
+	buf := make([]byte, 1024*100)
+
+	for i := 0; i < 3; i++ {
+		if _, err := conn.Write([]byte("sendfile")); err != nil {
+			log.Panicf("write 'sendfile' failed: %v", err)
+		}
+
+		if _, err := io.ReadFull(conn, buf); err != nil {
+			log.Panicf("read file failed: %v", err)
+		}
+	}
+}
+
+func TestUnix(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		return
+	}
+
+	unixAddr := "./test.unix"
+	defer os.Remove(unixAddr)
+	g := NewEngine(Config{
+		Network: "unix",
+		Addrs:   []string{unixAddr},
+	})
+	var connSvr *Conn
+	var connCli *Conn
+	g.OnOpen(func(c *Conn) {
+		if connSvr == nil {
+			connSvr = c
+		}
+		c.Type()
+		c.IsTCP()
+		c.IsUnix()
+		log.Printf("unix onOpen: %v, %v", c.LocalAddr().String(), c.RemoteAddr().String())
+	})
+	g.OnData(func(c *Conn, data []byte) {
+		log.Println("unix onData:", c.LocalAddr().String(), c.RemoteAddr().String(), string(data))
+		if c == connSvr {
+			_, err := c.Write([]byte("world"))
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		if c == connCli && string(data) == "world" {
+			c.Close()
+		}
+	})
+	chClose := make(chan *Conn, 2)
+	g.OnClose(func(c *Conn, err error) {
+		log.Println("unix onClose:", c.LocalAddr().String(), c.RemoteAddr().String(), err)
+		chClose <- c
+	})
+
+	err := g.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer g.Stop()
+
+	c, err := net.Dial("unix", unixAddr)
+	if err != nil {
+		t.Fatalf("unix Dial: %v, %v, %v", c.LocalAddr(), c.RemoteAddr(), err)
+	}
+	defer c.Close()
+	time.Sleep(time.Second / 10)
+	buf := []byte("hello")
+	connCli, err = g.AddConn(c)
+	if err != nil {
+		t.Fatalf("unix AddConn: %v, %v, %v", c.LocalAddr(), c.RemoteAddr(), err)
+	}
+	_, err = connCli.Write(buf)
+	if err != nil {
+		t.Fatalf("unix Write: %v, %v, %v", c.LocalAddr(), c.RemoteAddr(), err)
+	}
+	<-chClose
+	<-chClose
 }

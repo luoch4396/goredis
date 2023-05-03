@@ -35,8 +35,7 @@ type Engine struct {
 	Execute      func(f func())
 	TimerExecute func(f func())
 
-	mux sync.Mutex
-
+	mux    sync.Mutex
 	wgConn sync.WaitGroup
 
 	network string
@@ -111,7 +110,7 @@ func (g *Engine) Stop() {
 	}
 
 	g.Wait()
-	log.Infof("NIO-SERVER[%v] stop", g.Name)
+	log.Infof("NIO-SERVER-ENGINE[%v] stop", g.Name)
 }
 
 // Shutdown stops Engine gracefully with context.
@@ -159,10 +158,8 @@ func (g *Engine) OnClose(h func(c *Conn, err error)) {
 		panic("invalid nil handler")
 	}
 	g.onClose = func(c *Conn, err error) {
-		// g.Async(func() {
 		defer g.wgConn.Done()
 		h(c, err)
-		// })
 	}
 }
 
@@ -224,9 +221,7 @@ func (g *Engine) BeforeWrite(h func(c *Conn)) {
 
 // OnStop registers callback before Engine is stopped.
 func (g *Engine) OnStop(h func()) {
-	if h == nil {
-		panic("invalid nil handler")
-	}
+	checkIsNotNull(h)
 	g.onStop = h
 }
 
@@ -265,4 +260,10 @@ func (g *Engine) borrow(c *Conn) []byte {
 
 func (g *Engine) payback(c *Conn, buffer []byte) {
 	g.onReadBufferFree(c, buffer)
+}
+
+func checkIsNotNull(h func()) {
+	if h == nil {
+		panic("invalid nil handler")
+	}
 }

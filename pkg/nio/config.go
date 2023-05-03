@@ -47,5 +47,5 @@ type Config struct {
 	Listen func(network, addr string) (net.Listener, error)
 
 	// MaxOpenFiles unix sock open files
-	MaxOpenFiles int64
+	//MaxOpenFiles int64
 }

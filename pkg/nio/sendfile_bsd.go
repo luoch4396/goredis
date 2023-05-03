@@ -3,24 +3,18 @@
 package nio
 
 import (
-	"errors"
-	"net"
+	"goredis/pkg/pool/bytepool"
+	"io"
 	"os"
-	"syscall"
 )
 
 // max send file bytes of golang
 const maxSendfileSize = 4 << 20
 
-// Sendfile is unix zero copy of send file io
+// Sendfile 使用官方自带的零拷贝
 func (c *Conn) Sendfile(f *os.File, remain int64) (written int64, err error) {
 	if f == nil {
 		return 0, nil
-	}
-	c.mux.Lock()
-	if c.closed {
-		c.mux.Unlock()
-		return -1, net.ErrClosed
 	}
 
 	if remain <= 0 {
@@ -31,65 +25,35 @@ func (c *Conn) Sendfile(f *os.File, remain int64) (written int64, err error) {
 		remain = stat.Size()
 	}
 
-	if len(c.writeBuffer) > 0 {
-		if c.chWaitWrite == nil {
-			c.chWaitWrite = make(chan struct{}, 1)
-		}
-		c.mux.Unlock()
-		<-c.chWaitWrite
-		if c.closed {
-			c.chWaitWrite = nil
-			return -1, net.ErrClosed
-		}
-		c.mux.Lock()
-	}
-
-	c.p.g.beforeWrite(c)
-
-	var (
-		n     int
-		src   = int(f.Fd())
-		dst   = c.fd
-		total = remain
-	)
-
 	for remain > 0 {
-		n = maxSendfileSize
-		if int64(n) > remain {
-			n = int(remain)
+		bufLen := 1024 * 32
+		if bufLen > int(remain) {
+			bufLen = int(remain)
 		}
-		n, err = syscall.Sendfile(dst, src, nil, n)
-		//n, _, err := syscall.RawSyscall(syscall.SYS_SENDFILE, uintptr(dst), uintptr(unsafe.Pointer(&src)), uintptr(n))
-		if n > 0 {
-			remain -= int64(n)
-		} else if n == 0 && err == nil {
+		buf := bytepool.Malloc(bufLen)
+		nr, er := f.Read(buf)
+		if nr > 0 {
+			nw, ew := c.Write(buf[0:nr])
+			if nw < 0 {
+				nw = 0
+			}
+			remain -= int64(nw)
+			written += int64(nw)
+			if ew != nil {
+				err = ew
+				break
+			}
+			if nr != nw {
+				err = io.ErrShortWrite
+				break
+			}
+		}
+		if er != nil {
+			if er != io.EOF {
+				err = er
+			}
 			break
 		}
-		if errors.Is(err, syscall.EINTR) {
-			continue
-		}
-		if errors.Is(err, syscall.EAGAIN) {
-			c.modWrite()
-			if c.chWaitWrite == nil {
-				c.chWaitWrite = make(chan struct{}, 1)
-			}
-			c.mux.Unlock()
-			<-c.chWaitWrite
-			c.chWaitWrite = nil
-			if c.closed {
-				return total - remain, err
-			}
-			c.mux.Lock()
-			continue
-		}
-		if err != nil {
-			c.closeWithErrorWithoutLock(err)
-			c.mux.Unlock()
-			return total - remain, err
-		}
 	}
-
-	c.chWaitWrite = nil
-	c.mux.Unlock()
-	return total - remain, err
+	return written, err
 }
