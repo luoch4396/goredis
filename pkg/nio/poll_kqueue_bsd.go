@@ -44,7 +44,7 @@ func newPoll(g *Engine, isListener bool, index int) (*poll, error) {
 			index:      index,
 			listener:   ln,
 			isListener: isListener,
-			pollType:   "LISTENER",
+			pollType:   "POLL-LISTENER",
 		}
 		if g.network == "unix" {
 			p.unixSockAddr = addr
@@ -87,6 +87,7 @@ func (p *poll) addConn(c *Conn) {
 		return
 	}
 	c.p = p
+	p.g.onOpen(c)
 	p.g.connsUnix[fd] = c
 	p.modRead(fd)
 }
