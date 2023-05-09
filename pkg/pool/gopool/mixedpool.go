@@ -60,7 +60,7 @@ var defaultPool *MixedPool
 var cpus = runtime.NumCPU()
 
 func init() {
-	defaultPool = NewMixedPool(32, 4, 1024)
+	defaultPool = NewMixedPool(128, 4, 1024)
 }
 
 func Go(f func()) {
