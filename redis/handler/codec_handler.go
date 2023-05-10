@@ -55,14 +55,16 @@ func (c *codecHandler) HandleRead(ctx netty.InboundContext, message netty.Messag
 	gopool.Go(parseStreamingFunc)
 	//循环结果
 	for req := range ch {
-		if req.Error != nil {
-			if req.Error == io.EOF || req.Error == io.ErrUnexpectedEOF ||
-				strings.Contains(req.Error.Error(), "use of closed network connection") {
-				log.Errorf("handle message with errors, channel will be closed: " + ctx.Channel().RemoteAddr())
-				ctx.Channel().Close(req.Error)
+		err := req.Error
+		if err != nil {
+			if err == io.EOF || err == io.ErrUnexpectedEOF ||
+				strings.Contains(err.Error(), "use of closed network connection") {
+				log.Errorf("handle message with errors: %s, channel will be closed: %s", err.Error(),
+					ctx.Channel().RemoteAddr())
+				ctx.Channel().Close(err)
 				return
 			}
-			errRep := errors.NewStandardError(req.Error.Error())
+			errRep := errors.NewStandardError(err.Error())
 			ctx.Write(errRep.Info())
 			continue
 		}

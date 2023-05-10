@@ -49,19 +49,22 @@ func (server *SingleServer) Exec(client redis.ClientConn, cmdBytes [][]byte) (re
 			rep = &errors.UnknownError{}
 		}
 	}()
+	//为什么有些客户端是小写命令 有些是大写???
+	cmdName := strings.ToUpper(utils.BytesToString(cmdBytes[0]))
+	if cmdName == PING {
+		return DoPingCmd(cmdBytes[1:])
+	}
+	if cmdName == AUTH {
+		return DoAuthCmd(client, cmdBytes[1:])
+	}
 	//认证
 	if !isAuthed(client) {
 		return errors.NewStandardError("please check your password")
 	}
-	cmdName := strings.ToLower(utils.BytesToString(cmdBytes[0]))
 	switch cmdName {
-	case "ping":
-		return DoPingCmd(cmdBytes[1:])
-	case "auth":
-		return DoAuthCmd(client, cmdBytes[1:])
-	case "info":
+	case INFO:
 		return DoInfoCmd(cmdBytes)
-	case "client":
+	case CLIENT:
 		return DoInfoCmd(cmdBytes)
 	}
 	dbIndex := client.GetDBIndex()

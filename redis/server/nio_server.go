@@ -42,7 +42,7 @@ func NewRedisServer(config *Config, server redis.Server) {
 // TCP配置初始化 TODO 改为配置化
 func newTcpOp() *tcp.Options {
 	return &tcp.Options{
-		Timeout:         time.Second * 5,
+		Timeout:         time.Second * 30,
 		KeepAlive:       true,
 		KeepAlivePeriod: time.Second * 60,
 		Linger:          0,
