@@ -25,7 +25,7 @@ func init() {
 	//初始化日志模块
 	log2.NewLoggerBuilder().
 		BuildStdOut(os.Stdout).
-		BuildLevel("DEBUG").
+		BuildLevel("INFO").
 		BuildFile(fs).
 		Build()
 
@@ -90,7 +90,7 @@ func TestEcho(t *testing.T) {
 		}
 		c.SetLinger(1, 0)
 		c.SetNoDelay(true)
-		c.SetKeepAlive(true, time.Second*60)
+		//c.SetKeepAlive(true, time.Second*60)
 		c.SetDeadline(time.Now().Add(time.Second))
 		c.SetReadBuffer(1024 * 4)
 		c.SetWriteBuffer(1024 * 4)

@@ -8,10 +8,7 @@ import (
 	"os"
 )
 
-// max send file bytes of golang
-const maxSendfileSize = 4 << 20
-
-// Sendfile 使用官方自带的零拷贝
+// Sendfile .
 func (c *Conn) Sendfile(f *os.File, remain int64) (written int64, err error) {
 	if f == nil {
 		return 0, nil

@@ -35,8 +35,11 @@ func main() {
 		BuildFile(fs).
 		Build()
 	//开启tcp服务
-	server.NewRedisServer(&server.Config{
-		Address: utils.NewStringBuilder(configs.Server.Address,
-			":", strconv.FormatInt(int64(configs.Server.Port), 10)),
+	//server.NewRedisServer(&server.Config{
+	//	Address: utils.NewStringBuilder(configs.Server.Address,
+	//		":", strconv.FormatInt(int64(configs.Server.Port), 10)),
+	//}, server.NewRedisDB())
+	server.NewNioServer(&server.Config{
+		Address: utils.NewStringBuilder(":", strconv.FormatInt(int64(configs.Server.Port), 10)),
 	}, server.NewRedisDB())
 }

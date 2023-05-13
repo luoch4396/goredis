@@ -47,6 +47,12 @@ func dupStdConn(conn net.Conn) (*Conn, error) {
 
 	conn.Close()
 
+	// err = syscall.SetNonblock(newFd, true)
+	// if err != nil {
+	// 	syscall.Close(newFd)
+	// 	return nil, err
+	// }
+
 	c := &Conn{
 		fd:    newFd,
 		lAddr: lAddr,
@@ -55,9 +61,33 @@ func dupStdConn(conn net.Conn) (*Conn, error) {
 
 	switch conn.(type) {
 	case *net.TCPConn:
-		c.connType = ConnTypeTCP
+		c.typ = ConnTypeTCP
 	case *net.UnixConn:
-		c.connType = ConnTypeUnix
+		c.typ = ConnTypeUnix
+	case *net.UDPConn:
+		lAddrUDP := lAddr.(*net.UDPAddr)
+		newLAddr := net.UDPAddr{
+			IP:   make([]byte, len(lAddrUDP.IP)),
+			Port: lAddrUDP.Port,
+			Zone: lAddrUDP.Zone,
+		}
+
+		copy(newLAddr.IP, lAddrUDP.IP)
+
+		c.lAddr = &newLAddr
+		// c.lAddr = lAddrUDP
+		if rAddr == nil {
+			c.typ = ConnTypeUDPServer
+			c.connUDP = &udpConn{
+				parent: c,
+				conns:  map[string]*Conn{},
+			}
+		} else {
+			c.typ = ConnTypeUDPClientFromDial
+			c.connUDP = &udpConn{
+				parent: c,
+			}
+		}
 	default:
 	}
 

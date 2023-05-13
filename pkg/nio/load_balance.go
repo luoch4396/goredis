@@ -1,6 +1,6 @@
 package nio
 
-//LoadBalancer 负载均衡器
+// LoadBalancer 负载均衡器
 type LoadBalancer int
 
 const (
@@ -10,28 +10,28 @@ const (
 )
 
 type LoadBalance interface {
-	register(eventLoop *poll)
+	register(eventLoop *poller)
 
-	balance() *poll
+	balance() *poller
 
-	forEach(func(int, *poll) bool)
+	forEach(func(int, *poller) bool)
 
 	getSize() int
 }
 
 type roundRobinLoadBalancer struct {
 	nextIndex  int
-	eventLoops []*poll
+	eventLoops []*poller
 	size       int
 }
 
-func (lb *roundRobinLoadBalancer) register(el *poll) {
+func (lb *roundRobinLoadBalancer) register(el *poller) {
 	//el.idx = lb.size
 	lb.eventLoops = append(lb.eventLoops, el)
 	lb.size++
 }
 
-func (lb *roundRobinLoadBalancer) balance() (el *poll) {
+func (lb *roundRobinLoadBalancer) balance() (el *poller) {
 	el = lb.eventLoops[lb.nextIndex]
 	if lb.nextIndex++; lb.nextIndex >= lb.size {
 		lb.nextIndex = 0
@@ -39,7 +39,7 @@ func (lb *roundRobinLoadBalancer) balance() (el *poll) {
 	return
 }
 
-func (lb *roundRobinLoadBalancer) forEach(f func(int, *poll) bool) {
+func (lb *roundRobinLoadBalancer) forEach(f func(int, *poller) bool) {
 	for i, v := range lb.eventLoops {
 		if !f(i, v) {
 			break

@@ -7,6 +7,8 @@ import (
 	"goredis/pkg/pool/bytepool"
 	"goredis/pkg/utils/timer"
 	"net"
+	"runtime"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -16,16 +18,18 @@ import (
 type Conn struct {
 	mux sync.Mutex
 
-	p *poll
+	p *poller
 
 	fd int
+
+	connUDP *udpConn
 
 	rTimer *timer.Item
 	wTimer *timer.Item
 
 	writeBuffer []byte
 
-	connType ConnType
+	typ      ConnType
 	closed   bool
 	isWAdded bool
 	closeErr error
@@ -67,6 +71,11 @@ func (c *Conn) Read(b []byte) (int, error) {
 	return n, err
 }
 
+// ReadUDP .
+func (c *Conn) ReadUDP(b []byte) (*Conn, int, error) {
+	return c.ReadAndGetConn(b)
+}
+
 // ReadAndGetConn .
 func (c *Conn) ReadAndGetConn(b []byte) (*Conn, int, error) {
 	// use lock to prevent multiple conn data confusion when fd is reused on unix.
@@ -86,12 +95,45 @@ func (c *Conn) ReadAndGetConn(b []byte) (*Conn, int, error) {
 }
 
 func (c *Conn) doRead(b []byte) (*Conn, int, error) {
-	return c.readStream(b)
+	switch c.typ {
+	case ConnTypeTCP, ConnTypeUnix:
+		return c.readStream(b)
+	case ConnTypeUDPServer, ConnTypeUDPClientFromDial:
+		return c.readUDP(b)
+	case ConnTypeUDPClientFromRead:
+	default:
+	}
+	return c, 0, errors.New("invalid udp conn for reading")
 }
 
 func (c *Conn) readStream(b []byte) (*Conn, int, error) {
-	nRead, err := syscall.Read(c.fd, b)
-	return c, nRead, err
+	nread, err := syscall.Read(c.fd, b)
+	return c, nread, err
+}
+
+func (c *Conn) readUDP(b []byte) (*Conn, int, error) {
+	nread, rAddr, err := syscall.Recvfrom(c.fd, b, 0)
+	if c.closeErr == nil {
+		c.closeErr = err
+	}
+	if err != nil {
+		return c, 0, err
+	}
+
+	var g = c.p.g
+	var dstConn = c
+	if c.typ == ConnTypeUDPServer {
+		uc, ok := c.connUDP.getConn(c.p, c.fd, rAddr)
+		if g.udpReadTimeout > 0 {
+			uc.SetReadDeadline(time.Now().Add(g.udpReadTimeout))
+		}
+		if !ok {
+			g.onOpen(uc)
+		}
+		dstConn = uc
+	}
+
+	return dstConn, nread, err
 }
 
 // Write implements Write.
@@ -167,6 +209,19 @@ func (c *Conn) writeStream(b []byte) (int, error) {
 	return syscall.Write(c.fd, b)
 }
 
+func (c *Conn) writeUDPClientFromDial(b []byte) (int, error) {
+	return syscall.Write(c.fd, b)
+}
+
+func (c *Conn) writeUDPClientFromRead(b []byte) (int, error) {
+	err := syscall.Sendto(c.fd, b, 0, c.connUDP.rAddr)
+	if err != nil {
+		return 0, err
+	}
+	return len(b), nil
+}
+
+// Close implements Close.
 func (c *Conn) Close() error {
 	return c.closeWithError(nil)
 }
@@ -194,12 +249,12 @@ func (c *Conn) SetDeadline(t time.Time) error {
 			g := c.p.g
 			now := time.Now()
 			if c.rTimer == nil {
-				c.rTimer = g.AfterFunc(t.Sub(now), func() { c.closeWithError(getError("read timeout")) })
+				c.rTimer = g.AfterFunc(t.Sub(now), func() { c.closeWithError(errors.New("read timeout")) })
 			} else {
 				c.rTimer.Reset(t.Sub(now))
 			}
 			if c.wTimer == nil {
-				c.wTimer = g.AfterFunc(t.Sub(now), func() { c.closeWithError(getError("write timeout")) })
+				c.wTimer = g.AfterFunc(t.Sub(now), func() { c.closeWithError(errors.New("write timeout")) })
 			} else {
 				c.wTimer.Reset(t.Sub(now))
 			}
@@ -240,39 +295,59 @@ func (c *Conn) setDeadline(timer **timer.Item, returnErr error, t time.Time) err
 
 // SetReadDeadline implements SetReadDeadline.
 func (c *Conn) SetReadDeadline(t time.Time) error {
-	return c.setDeadline(&c.rTimer, getError("kqueue read timeout"), t)
+	return c.setDeadline(&c.rTimer, errors.New("read timeout"), t)
 }
 
 // SetWriteDeadline implements SetWriteDeadline.
 func (c *Conn) SetWriteDeadline(t time.Time) error {
-	return c.setDeadline(&c.wTimer, getError("kqueue write timeout"), t)
+	return c.setDeadline(&c.wTimer, errors.New("write timeout"), t)
 }
 
 // SetNoDelay implements SetNoDelay.
-func (c *Conn) SetNoDelay(noDelay bool) error {
-	return SetNoDelay(c.fd, noDelay)
+func (c *Conn) SetNoDelay(nodelay bool) error {
+	if nodelay {
+		return syscall.SetsockoptInt(c.fd, syscall.IPPROTO_TCP, syscall.TCP_NODELAY, 1)
+	}
+	return syscall.SetsockoptInt(c.fd, syscall.IPPROTO_TCP, syscall.TCP_NODELAY, 0)
 }
 
 // SetReadBuffer implements SetReadBuffer.
 func (c *Conn) SetReadBuffer(bytes int) error {
-	return SetReadBuffer(c.fd, bytes)
+	return syscall.SetsockoptInt(c.fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF, bytes)
 }
 
 // SetWriteBuffer implements SetWriteBuffer.
 func (c *Conn) SetWriteBuffer(bytes int) error {
-	return SetWriteBuffer(c.fd, bytes)
+	return syscall.SetsockoptInt(c.fd, syscall.SOL_SOCKET, syscall.SO_SNDBUF, bytes)
 }
 
-func (c *Conn) SetKeepAlive(keepalive bool, d time.Duration) error {
+// SetKeepAlive implements SetKeepAlive.
+func (c *Conn) SetKeepAlive(keepalive bool) error {
 	if keepalive {
-		return SetKeepAlive(c.fd, int(d.Seconds()), keepalive)
-	} else {
-		return SetKeepAlive(c.fd, 0, keepalive)
+		return syscall.SetsockoptInt(c.fd, syscall.SOL_SOCKET, syscall.SO_KEEPALIVE, 1)
 	}
+	return syscall.SetsockoptInt(c.fd, syscall.SOL_SOCKET, syscall.SO_KEEPALIVE, 0)
 }
 
-func (c *Conn) SetLinger(onOff int32, linger int32) error {
-	return SetLinger(c.fd, onOff, linger)
+// SetKeepAlivePeriod implements SetKeepAlivePeriod.
+func (c *Conn) SetKeepAlivePeriod(d time.Duration) error {
+	if runtime.GOOS == "linux" {
+		d += (time.Second - time.Nanosecond)
+		secs := int(d.Seconds())
+		if err := syscall.SetsockoptInt(c.fd, IPPROTO_TCP, TCP_KEEPINTVL, secs); err != nil {
+			return err
+		}
+		return syscall.SetsockoptInt(c.fd, IPPROTO_TCP, TCP_KEEPIDLE, secs)
+	}
+	return errors.New("not supported")
+}
+
+// SetLinger implements SetLinger.
+func (c *Conn) SetLinger(onoff int32, linger int32) error {
+	return syscall.SetsockoptLinger(c.fd, syscall.SOL_SOCKET, syscall.SO_LINGER, &syscall.Linger{
+		Onoff:  onoff,  // 1
+		Linger: linger, // 0
+	})
 }
 
 // Session returns user session.
@@ -319,7 +394,7 @@ func (c *Conn) write(b []byte) (int, error) {
 			n = 0
 		}
 		left := len(b) - n
-		if left > 0 && c.connType == ConnTypeTCP {
+		if left > 0 && c.typ == ConnTypeTCP {
 			c.writeBuffer = bytepool.Malloc(left)
 			copy(c.writeBuffer, b[n:])
 			c.modWrite()
@@ -362,6 +437,7 @@ func (c *Conn) flush() error {
 			copy(c.writeBuffer, old[n:])
 			bytepool.Free(old)
 		}
+		// c.modWrite()
 	} else {
 		bytepool.Free(old)
 		c.writeBuffer = nil
@@ -423,7 +499,19 @@ func (c *Conn) writev(in [][]byte) (int, error) {
 }
 
 func (c *Conn) doWrite(b []byte) (int, error) {
-	return c.writeStream(b)
+	var err error
+	var nread int
+	switch c.typ {
+	case ConnTypeTCP, ConnTypeUnix:
+		nread, err = c.writeStream(b)
+	case ConnTypeUDPServer:
+	case ConnTypeUDPClientFromDial:
+		nread, err = c.writeUDPClientFromDial(b)
+	case ConnTypeUDPClientFromRead:
+		nread, err = c.writeUDPClientFromRead(b)
+	default:
+	}
+	return nread, err
 }
 
 func (c *Conn) overflow(n int) bool {
@@ -471,10 +559,19 @@ func (c *Conn) closeWithErrorWithoutLock(err error) error {
 		c.p.deleteConn(c)
 	}
 
-	return syscall.Close(c.fd)
+	switch c.typ {
+	case ConnTypeTCP, ConnTypeUnix:
+		err = syscall.Close(c.fd)
+	case ConnTypeUDPServer, ConnTypeUDPClientFromDial, ConnTypeUDPClientFromRead:
+		err = c.connUDP.Close()
+	default:
+	}
+
+	return err
 }
 
-func NewConn(conn net.Conn) (*Conn, error) {
+// NBConn converts net.Conn to *Conn.
+func NBConn(conn net.Conn) (*Conn, error) {
 	if conn == nil {
 		return nil, errors.New("invalid conn: nil")
 	}
@@ -487,4 +584,101 @@ func NewConn(conn net.Conn) (*Conn, error) {
 		}
 	}
 	return c, nil
+}
+
+type udpConn struct {
+	parent *Conn
+
+	rAddr    syscall.Sockaddr
+	rAddrStr string
+
+	mux   sync.RWMutex
+	conns map[string]*Conn
+}
+
+func (u *udpConn) Close() error {
+	parent := u.parent
+	if parent.connUDP != u {
+		parent.mux.Lock()
+		delete(parent.connUDP.conns, u.rAddrStr)
+		parent.mux.Unlock()
+	} else {
+		syscall.Close(u.parent.fd)
+		for _, c := range u.conns {
+			c.Close()
+		}
+		u.conns = nil
+	}
+	return nil
+}
+
+func (u *udpConn) getConn(p *poller, fd int, rsa syscall.Sockaddr) (*Conn, bool) {
+	rAddrStr := getUDPNetAddrString(rsa)
+	u.mux.RLock()
+	c, ok := u.conns[rAddrStr]
+	u.mux.RUnlock()
+
+	if !ok {
+		c = &Conn{
+			p:     p,
+			fd:    fd,
+			lAddr: u.parent.lAddr,
+			rAddr: getUDPNetAddr(rsa),
+			typ:   ConnTypeUDPClientFromRead,
+			connUDP: &udpConn{
+				rAddr:    rsa,
+				rAddrStr: rAddrStr,
+				parent:   u.parent,
+			},
+		}
+		u.mux.Lock()
+		u.conns[rAddrStr] = c
+		u.mux.Unlock()
+	}
+
+	return c, ok
+}
+
+func getUDPNetAddrString(sa syscall.Sockaddr) string {
+	if sa == nil {
+		return "<nil>"
+	}
+	var ip []byte
+	var port int
+	var zone string
+
+	switch vt := sa.(type) {
+	case *syscall.SockaddrInet4:
+		ip = vt.Addr[:]
+		port = vt.Port
+		return string(ip) + strconv.Itoa(port)
+	case *syscall.SockaddrInet6:
+		ip = vt.Addr[:]
+		port = vt.Port
+		i, err := net.InterfaceByIndex(int(vt.ZoneId))
+		if err == nil && i != nil {
+			return string(ip) + i.Name + strconv.Itoa(port)
+		}
+	}
+
+	return string(ip) + zone + strconv.Itoa(port)
+}
+
+func getUDPNetAddr(sa syscall.Sockaddr) *net.UDPAddr {
+	ret := &net.UDPAddr{}
+	switch vt := sa.(type) {
+	case *syscall.SockaddrInet4:
+		ret.IP = make([]byte, len(vt.Addr))
+		copy(ret.IP[:], vt.Addr[:])
+		ret.Port = vt.Port
+	case *syscall.SockaddrInet6:
+		ret.IP = make([]byte, len(vt.Addr))
+		copy(ret.IP[:], vt.Addr[:])
+		ret.Port = vt.Port
+		i, err := net.InterfaceByIndex(int(vt.ZoneId))
+		if err == nil && i != nil {
+			ret.Zone = i.Name
+		}
+	}
+	return ret
 }

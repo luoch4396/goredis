@@ -43,12 +43,12 @@ func NewSingleServer() *SingleServer {
 
 func (server *SingleServer) Exec(client redis.ClientConn, cmdBytes [][]byte) (rep tcp.Info) {
 	//TODO:错误恢复 移动至协程池？
-	defer func() {
-		if err := recover(); err != nil {
-			log.MakeErrorLog(err)
-			rep = &errors.UnknownError{}
-		}
-	}()
+	//defer func() {
+	//	if err := recover(); err != nil {
+	//		log.MakeErrorLog(err)
+	//		rep = &errors.UnknownError{}
+	//	}
+	//}()
 	//为什么有些客户端是小写命令 有些是大写???
 	cmdName := strings.ToUpper(utils.BytesToString(cmdBytes[0]))
 	if cmdName == PING {

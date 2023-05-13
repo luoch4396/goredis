@@ -1,28 +1,32 @@
+//go:build windows
+
 package nio
 
 import (
 	"bytes"
 	"errors"
-	"goredis/pkg/utils/timer"
 	"io"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/lesismal/nbio/timer"
 )
 
-// Conn form net.Conn. all func is supported tcp conn and fit in redis tcp server
+// Conn wraps net.Conn.
 type Conn struct {
-	p *poll
+	p *poller
 
 	hash int
 
 	mux sync.Mutex
 
-	conn net.Conn
+	conn    net.Conn
+	connUDP *udpConn
 
 	rTimer *timer.Item
 
-	connType ConnType
+	typ      ConnType
 	closed   bool
 	closeErr error
 
@@ -60,8 +64,37 @@ func (c *Conn) Read(b []byte) (int, error) {
 	return nread, err
 }
 
+// ReadUDP .
+func (c *Conn) ReadUDP(b []byte) (*Conn, int, error) {
+	if c.closeErr != nil {
+		return c, 0, c.closeErr
+	}
+
+	var reader io.Reader = c.conn
+	if c.cache != nil {
+		reader = c.cache
+	}
+	nread, err := reader.Read(b)
+	if c.closeErr == nil {
+		c.closeErr = err
+	}
+
+	return c, nread, err
+}
+
 func (c *Conn) read(b []byte) (int, error) {
-	return c.readTCP(b)
+	var err error
+	var nread int
+	switch c.typ {
+	case ConnTypeTCP:
+		nread, err = c.readTCP(b)
+	case ConnTypeUDPServer, ConnTypeUDPClientFromDial:
+		nread, err = c.readUDP(b)
+	case ConnTypeUDPClientFromRead:
+		err = errors.New("invalid udp conn for reading")
+	default:
+	}
+	return nread, err
 }
 
 func (c *Conn) readTCP(b []byte) (int, error) {
@@ -86,10 +119,62 @@ func (c *Conn) readTCP(b []byte) (int, error) {
 	return nread, err
 }
 
-// Write from net.Conn.Write.
+func (c *Conn) readUDP(b []byte) (int, error) {
+	if c.connUDP == nil {
+		return 0, errors.New("invalid conn")
+	}
+	nread, rAddr, err := c.connUDP.ReadFromUDP(b)
+	if c.closeErr == nil {
+		c.closeErr = err
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	var g = c.p.g
+	var dstConn = c
+	if c.typ == ConnTypeUDPServer {
+		uc, ok := c.connUDP.getConn(c.p, rAddr)
+		if g.udpReadTimeout > 0 {
+			uc.SetReadDeadline(time.Now().Add(g.udpReadTimeout))
+		}
+		if !ok {
+			p := g.pollers[c.Hash()%len(g.pollers)]
+			p.addConn(uc)
+		}
+		dstConn = uc
+	}
+
+	if g.onRead != nil {
+		if nread > 0 {
+			if dstConn.cache == nil {
+				dstConn.cache = bytes.NewBuffer(nil)
+			}
+			dstConn.cache.Write(b[:nread])
+		}
+		g.onRead(dstConn)
+		return nread, nil
+	} else if nread > 0 {
+		g.onData(dstConn, b[:nread])
+	}
+
+	return nread, err
+}
+
+// Write wraps net.Conn.Write.
 func (c *Conn) Write(b []byte) (int, error) {
-	//TCP
-	nwrite, err := c.writeTCP(b)
+	var err error
+	var nwrite int
+	switch c.typ {
+	case ConnTypeTCP:
+		nwrite, err = c.writeTCP(b)
+	case ConnTypeUDPServer:
+	case ConnTypeUDPClientFromDial:
+		nwrite, err = c.writeUDPClientFromDial(b)
+	case ConnTypeUDPClientFromRead:
+		nwrite, err = c.writeUDPClientFromRead(b)
+	default:
+	}
 	return nwrite, err
 }
 
@@ -107,8 +192,42 @@ func (c *Conn) writeTCP(b []byte) (int, error) {
 	return nwrite, err
 }
 
-// Writev from buffers.WriteTo/syscall.Writev.
+func (c *Conn) writeUDPClientFromDial(b []byte) (int, error) {
+	nwrite, err := c.connUDP.Write(b)
+	if err != nil {
+		if c.closeErr == nil {
+			c.closeErr = err
+		}
+		c.Close()
+	}
+	return nwrite, err
+}
+
+func (c *Conn) writeUDPClientFromRead(b []byte) (int, error) {
+	nwrite, err := c.connUDP.WriteToUDP(b, c.connUDP.rAddr)
+	if err != nil {
+		if c.closeErr == nil {
+			c.closeErr = err
+		}
+		c.Close()
+	}
+	return nwrite, err
+}
+
+// Writev wraps buffers.WriteTo/syscall.Writev.
 func (c *Conn) Writev(in [][]byte) (int, error) {
+	if c.connUDP == nil {
+		buffers := net.Buffers(in)
+		nwrite, err := buffers.WriteTo(c.conn)
+		if err != nil {
+			if c.closeErr == nil {
+				c.closeErr = err
+			}
+			c.Close()
+		}
+		return int(nwrite), err
+	}
+
 	var total = 0
 	for _, b := range in {
 		nwrite, err := c.Write(b)
@@ -126,7 +245,7 @@ func (c *Conn) Writev(in [][]byte) (int, error) {
 	return total, nil
 }
 
-// Close from net.Conn.Close.
+// Close wraps net.Conn.Close.
 func (c *Conn) Close() error {
 	var err error
 	c.mux.Lock()
@@ -137,7 +256,15 @@ func (c *Conn) Close() error {
 			c.rTimer.Stop()
 			c.rTimer = nil
 		}
-		err = c.conn.Close()
+
+		switch c.typ {
+		case ConnTypeTCP:
+			err = c.conn.Close()
+		case ConnTypeUDPServer, ConnTypeUDPClientFromDial, ConnTypeUDPClientFromRead:
+			err = c.connUDP.Close()
+		default:
+		}
+
 		c.mux.Unlock()
 		if c.p.g != nil {
 			c.p.deleteConn(c)
@@ -148,6 +275,7 @@ func (c *Conn) Close() error {
 	return err
 }
 
+// CloseWithError .
 func (c *Conn) CloseWithError(err error) error {
 	if c.closeErr == nil {
 		c.closeErr = err
@@ -155,49 +283,94 @@ func (c *Conn) CloseWithError(err error) error {
 	return c.Close()
 }
 
-// LocalAddr from net.Conn.LocalAddr.
+// LocalAddr wraps net.Conn.LocalAddr.
 func (c *Conn) LocalAddr() net.Addr {
-	return c.conn.LocalAddr()
-}
-
-// RemoteAddr from net.Conn.RemoteAddr.
-func (c *Conn) RemoteAddr() net.Addr {
-	//tcp
-	return c.conn.RemoteAddr()
-}
-
-// SetDeadline from net.Conn.SetDeadline.
-func (c *Conn) SetDeadline(t time.Time) error {
-	return c.conn.SetDeadline(t)
-}
-
-// SetReadDeadline from net.Conn.SetReadDeadline.
-func (c *Conn) SetReadDeadline(t time.Time) error {
-	if t.IsZero() {
-		t = time.Now().Add(timer.TimeForever)
-	}
-	return c.conn.SetReadDeadline(t)
-}
-
-// SetWriteDeadline from net.Conn.SetWriteDeadline.
-func (c *Conn) SetWriteDeadline(t time.Time) error {
-	if t.IsZero() {
-		t = time.Now().Add(timer.TimeForever)
-	}
-	return c.conn.SetWriteDeadline(t)
-}
-
-// SetNoDelay from net.Conn.SetNoDelay.
-func (c *Conn) SetNoDelay(noDelay bool) error {
-	conn, ok := c.conn.(*net.TCPConn)
-	if ok {
-		return conn.SetNoDelay(noDelay)
+	switch c.typ {
+	case ConnTypeTCP:
+		return c.conn.LocalAddr()
+	case ConnTypeUDPServer, ConnTypeUDPClientFromDial, ConnTypeUDPClientFromRead:
+		return c.connUDP.LocalAddr()
+	default:
 	}
 	return nil
 }
 
-// SetReadBuffer from net.Conn.SetReadBuffer.
+// RemoteAddr wraps net.Conn.RemoteAddr.
+func (c *Conn) RemoteAddr() net.Addr {
+	switch c.typ {
+	case ConnTypeTCP:
+		return c.conn.RemoteAddr()
+	case ConnTypeUDPClientFromDial:
+		return c.connUDP.RemoteAddr()
+	case ConnTypeUDPClientFromRead:
+		return c.connUDP.rAddr
+	default:
+	}
+	return nil
+}
+
+// SetDeadline wraps net.Conn.SetDeadline.
+func (c *Conn) SetDeadline(t time.Time) error {
+	if c.typ == ConnTypeTCP {
+		return c.conn.SetDeadline(t)
+	}
+	return c.SetReadDeadline(t)
+}
+
+// SetReadDeadline wraps net.Conn.SetReadDeadline.
+func (c *Conn) SetReadDeadline(t time.Time) error {
+	if t.IsZero() {
+		t = time.Now().Add(timer.TimeForever)
+	}
+
+	if c.typ == ConnTypeTCP {
+		return c.conn.SetReadDeadline(t)
+	}
+
+	timeout := time.Until(t)
+	if c.rTimer == nil {
+		c.rTimer = c.p.g.AfterFunc(timeout, func() {
+			c.CloseWithError(errReadTimeout)
+		})
+	} else {
+		c.rTimer.Reset(timeout)
+	}
+
+	return nil
+}
+
+// SetWriteDeadline wraps net.Conn.SetWriteDeadline.
+func (c *Conn) SetWriteDeadline(t time.Time) error {
+	if c.typ != ConnTypeTCP {
+		return nil
+	}
+
+	if t.IsZero() {
+		t = time.Now().Add(timer.TimeForever)
+	}
+
+	return c.conn.SetWriteDeadline(t)
+}
+
+// SetNoDelay wraps net.Conn.SetNoDelay.
+func (c *Conn) SetNoDelay(nodelay bool) error {
+	if c.typ != ConnTypeTCP {
+		return nil
+	}
+
+	conn, ok := c.conn.(*net.TCPConn)
+	if ok {
+		return conn.SetNoDelay(nodelay)
+	}
+	return nil
+}
+
+// SetReadBuffer wraps net.Conn.SetReadBuffer.
 func (c *Conn) SetReadBuffer(bytes int) error {
+	if c.typ != ConnTypeTCP {
+		return nil
+	}
+
 	conn, ok := c.conn.(*net.TCPConn)
 	if ok {
 		return conn.SetReadBuffer(bytes)
@@ -205,8 +378,12 @@ func (c *Conn) SetReadBuffer(bytes int) error {
 	return nil
 }
 
-// SetWriteBuffer from net.Conn.SetWriteBuffer.
+// SetWriteBuffer wraps net.Conn.SetWriteBuffer.
 func (c *Conn) SetWriteBuffer(bytes int) error {
+	if c.typ != ConnTypeTCP {
+		return nil
+	}
+
 	conn, ok := c.conn.(*net.TCPConn)
 	if ok {
 		return conn.SetWriteBuffer(bytes)
@@ -214,21 +391,38 @@ func (c *Conn) SetWriteBuffer(bytes int) error {
 	return nil
 }
 
-// SetKeepAlive from net.Conn.SetKeepAlive.
-func (c *Conn) SetKeepAlive(keepalive bool, d time.Duration) error {
+// SetKeepAlive wraps net.Conn.SetKeepAlive.
+func (c *Conn) SetKeepAlive(keepalive bool) error {
+	if c.typ != ConnTypeTCP {
+		return nil
+	}
+
 	conn, ok := c.conn.(*net.TCPConn)
 	if ok {
-		if keepalive && d != 0 {
-			err := conn.SetKeepAlive(keepalive)
-			err = conn.SetKeepAlivePeriod(d)
-			return err
-		}
+		return conn.SetKeepAlive(keepalive)
 	}
 	return nil
 }
 
-// SetLinger from net.Conn.SetLinger.
-func (c *Conn) SetLinger(onOff int32, linger int32) error {
+// SetKeepAlivePeriod wraps net.Conn.SetKeepAlivePeriod.
+func (c *Conn) SetKeepAlivePeriod(d time.Duration) error {
+	if c.typ != ConnTypeTCP {
+		return nil
+	}
+
+	conn, ok := c.conn.(*net.TCPConn)
+	if ok {
+		return conn.SetKeepAlivePeriod(d)
+	}
+	return nil
+}
+
+// SetLinger wraps net.Conn.SetLinger.
+func (c *Conn) SetLinger(onoff int32, linger int32) error {
+	if c.typ != ConnTypeTCP {
+		return nil
+	}
+
 	conn, ok := c.conn.(*net.TCPConn)
 	if ok {
 		return conn.SetLinger(int(linger))
@@ -250,8 +444,26 @@ func newConn(conn net.Conn) *Conn {
 	c := &Conn{}
 	addr := conn.LocalAddr().String()
 
-	c.conn = conn
-	c.connType = ConnTypeTCP
+	uc, ok := conn.(*net.UDPConn)
+	if ok {
+		rAddr := uc.RemoteAddr()
+		if rAddr == nil {
+			c.typ = ConnTypeUDPServer
+			c.connUDP = &udpConn{
+				UDPConn: uc,
+				conns:   map[string]*Conn{},
+			}
+		} else {
+			c.typ = ConnTypeUDPClientFromDial
+			addr += rAddr.String()
+			c.connUDP = &udpConn{
+				UDPConn: uc,
+			}
+		}
+	} else {
+		c.conn = conn
+		c.typ = ConnTypeTCP
+	}
 
 	for _, ch := range addr {
 		c.hash = 31*c.hash + int(ch)
@@ -263,7 +475,8 @@ func newConn(conn net.Conn) *Conn {
 	return c
 }
 
-func NewConn(conn net.Conn) (*Conn, error) {
+// NBConn converts net.Conn to *Conn.
+func NBConn(conn net.Conn) (*Conn, error) {
 	if conn == nil {
 		return nil, errors.New("invalid conn: nil")
 	}
@@ -272,4 +485,60 @@ func NewConn(conn net.Conn) (*Conn, error) {
 		c = newConn(conn)
 	}
 	return c, nil
+}
+
+type udpConn struct {
+	*net.UDPConn
+	rAddr *net.UDPAddr
+
+	mux    sync.RWMutex
+	parent *udpConn
+	conns  map[string]*Conn
+}
+
+func (u *udpConn) Close() error {
+	parent := u.parent
+	if parent != nil {
+		parent.mux.Lock()
+		delete(parent.conns, u.rAddr.String())
+		parent.mux.Unlock()
+	} else {
+		u.UDPConn.Close()
+		for _, c := range u.conns {
+			c.Close()
+		}
+		u.conns = nil
+	}
+	return nil
+}
+
+func (u *udpConn) getConn(p *poller, rAddr *net.UDPAddr) (*Conn, bool) {
+	u.mux.RLock()
+	addr := rAddr.String()
+	c, ok := u.conns[addr]
+	u.mux.RUnlock()
+
+	if !ok {
+		c = &Conn{
+			p:   p,
+			typ: ConnTypeUDPClientFromRead,
+			connUDP: &udpConn{
+				parent:  u,
+				rAddr:   rAddr,
+				UDPConn: u.UDPConn,
+			},
+		}
+		hashAddr := u.LocalAddr().String() + addr
+		for _, ch := range hashAddr {
+			c.hash = 31*c.hash + int(ch)
+		}
+		if c.hash < 0 {
+			c.hash = -c.hash
+		}
+		u.mux.Lock()
+		u.conns[addr] = c
+		u.mux.Unlock()
+	}
+
+	return c, ok
 }

@@ -2,10 +2,12 @@ package nio
 
 import (
 	"net"
+	"time"
 )
 
-// Config TCP配置
+// Config nio server config
 type Config struct {
+	// Name describes your gopher name for logging, it's set to "NB" by default.
 	Name string
 
 	// Network is the listening protocol, used with Addrs together.
@@ -37,8 +39,11 @@ type Config struct {
 	// LockPoller represents poller's goroutine to lock thread or not, it's set to false by default.
 	LockPoller bool
 
-	// EpollMod sets the epoll mod, EPOLLLT by default. LT/ET
+	// EpollMod sets the epoll mod, EPOLLLT by default.
 	EpollMod uint32
+
+	// UDPReadTimeout sets the timeout for udp sessions.
+	UDPReadTimeout time.Duration
 
 	// TimerExecute sets the executor for timer callbacks.
 	TimerExecute func(f func())
@@ -46,6 +51,6 @@ type Config struct {
 	// Listen is used to create listener for Engine.
 	Listen func(network, addr string) (net.Listener, error)
 
-	// MaxOpenFiles unix sock open files
-	//MaxOpenFiles int64
+	// ListenUDP is used to create udp listener for Engine.
+	ListenUDP func(network string, laddr *net.UDPAddr) (*net.UDPConn, error)
 }

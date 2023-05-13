@@ -1,45 +1,74 @@
 package nio
 
 import (
-	"goredis/pkg/errors"
 	"goredis/pkg/log"
 	"net"
+	"runtime"
 	"time"
+	"unsafe"
 )
 
 // ConnType .
 type ConnType = int8
 
 const (
-	// ConnTypeTCP tcp socket
+	// ConnTypeTCP .
 	ConnTypeTCP ConnType = iota + 1
-	// ConnTypeUnix unix socket
+	// ConnTypeUDPServer .
+	ConnTypeUDPServer
+	// ConnTypeUDPClientFromRead .
+	ConnTypeUDPClientFromRead
+	// ConnTypeUDPClientFromDial .
+	ConnTypeUDPClientFromDial
+	// ConnTypeUnix .
 	ConnTypeUnix
 )
 
-// 封装错误
-func getError(errStr string) error {
-	return errors.NewStandardError(errStr)
-}
-
 // Type .
 func (c *Conn) Type() ConnType {
-	return c.connType
+	return c.typ
 }
 
 // IsTCP .
 func (c *Conn) IsTCP() bool {
-	return c.connType == ConnTypeTCP
+	return c.typ == ConnTypeTCP
 }
 
-// IsUnix FOR UNIX CONN
+// IsUDP .
+func (c *Conn) IsUDP() bool {
+	switch c.typ {
+	case ConnTypeUDPServer, ConnTypeUDPClientFromDial, ConnTypeUDPClientFromRead:
+		return true
+	}
+	return false
+}
+
+// IsUnix .
 func (c *Conn) IsUnix() bool {
-	return c.connType == ConnTypeUnix
+	return c.typ == ConnTypeUnix
 }
 
 // OnData registers callback for data.
 func (c *Conn) OnData(h func(conn *Conn, data []byte)) {
 	c.DataHandler = h
+}
+
+// Dial wraps net.Dial.
+func Dial(network string, address string) (*Conn, error) {
+	conn, err := net.Dial(network, address)
+	if err != nil {
+		return nil, err
+	}
+	return NBConn(conn)
+}
+
+// DialTimeout wraps net.DialTimeout.
+func DialTimeout(network string, address string, timeout time.Duration) (*Conn, error) {
+	conn, err := net.DialTimeout(network, address, timeout)
+	if err != nil {
+		return nil, err
+	}
+	return NBConn(conn)
 }
 
 // Lock .
@@ -84,7 +113,10 @@ func (c *Conn) Execute(f func()) bool {
 				func() {
 					defer func() {
 						if err := recover(); err != nil {
-							log.MakeErrorLog(err)
+							const size = 64 << 10
+							buf := make([]byte, size)
+							buf = buf[:runtime.Stack(buf, false)]
+							log.Errorf("conn execute failed: %v\n%v\n", err, *(*string)(unsafe.Pointer(&buf)))
 						}
 					}()
 					f()
@@ -109,7 +141,7 @@ func (c *Conn) Execute(f func()) bool {
 // MustExecute .
 func (c *Conn) MustExecute(f func()) {
 	c.mux.Lock()
-	isHead := len(c.execList) == 0
+	isHead := (len(c.execList) == 0)
 	c.execList = append(c.execList, f)
 	c.mux.Unlock()
 
@@ -131,22 +163,4 @@ func (c *Conn) MustExecute(f func()) {
 			}
 		})
 	}
-}
-
-// Dial from net.Dial.
-func Dial(network string, address string) (*Conn, error) {
-	conn, err := net.Dial(network, address)
-	if err != nil {
-		return nil, err
-	}
-	return NewConn(conn)
-}
-
-// DialTimeout wraps net.DialTimeout.
-func DialTimeout(network string, address string, timeout time.Duration) (*Conn, error) {
-	conn, err := net.DialTimeout(network, address, timeout)
-	if err != nil {
-		return nil, err
-	}
-	return NewConn(conn)
 }

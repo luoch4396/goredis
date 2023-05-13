@@ -5,8 +5,10 @@ import (
 	"goredis/pkg/log"
 	"goredis/pkg/utils/timer"
 	"net"
+	"runtime"
 	"sync"
 	"time"
+	"unsafe"
 )
 
 const (
@@ -18,6 +20,9 @@ const (
 
 	// DefaultMaxConnReadTimesPerEventLoop .
 	DefaultMaxConnReadTimesPerEventLoop = 3
+
+	// DefaultUDPReadTimeout .
+	DefaultUDPReadTimeout = 120 * time.Second
 )
 
 var (
@@ -35,17 +40,20 @@ type Engine struct {
 	Execute      func(f func())
 	TimerExecute func(f func())
 
-	mux    sync.Mutex
+	mux sync.Mutex
+
 	wgConn sync.WaitGroup
 
-	network string
-	addrs   []string
-	listen  func(network, addr string) (net.Listener, error)
+	network   string
+	addrs     []string
+	listen    func(network, addr string) (net.Listener, error)
+	listenUDP func(network string, laddr *net.UDPAddr) (*net.UDPConn, error)
 
 	pollerNum                    int
 	readBufferSize               int
 	maxWriteBufferSize           int
 	maxConnReadTimesPerEventLoop int
+	udpReadTimeout               time.Duration
 	epollMod                     uint32
 	lockListener                 bool
 	lockPoller                   bool
@@ -53,8 +61,8 @@ type Engine struct {
 	connsStd  map[*Conn]struct{}
 	connsUnix []*Conn
 
-	listeners []*poll
-	polls     []*poll
+	listeners []*poller
+	pollers   []*poller
 
 	onOpen            func(c *Conn)
 	onClose           func(c *Conn, err error)
@@ -62,10 +70,11 @@ type Engine struct {
 	onData            func(c *Conn, data []byte)
 	onReadBufferAlloc func(c *Conn) []byte
 	onReadBufferFree  func(c *Conn, buffer []byte)
-	beforeRead        func(c *Conn)
-	afterRead         func(c *Conn)
-	beforeWrite       func(c *Conn)
-	onStop            func()
+	// onWriteBufferFree func(c *Conn, buffer []byte)
+	beforeRead  func(c *Conn)
+	afterRead   func(c *Conn)
+	beforeWrite func(c *Conn)
+	onStop      func()
 }
 
 // Stop closes listeners/pollers/conns/timer.
@@ -106,11 +115,11 @@ func (g *Engine) Stop() {
 	g.Timer.Stop()
 
 	for i := 0; i < g.pollerNum; i++ {
-		g.polls[i].stop()
+		g.pollers[i].stop()
 	}
 
 	g.Wait()
-	log.Infof("NIO-SERVER-ENGINE[%v] stop", g.Name)
+	log.Infof("Nio_Server[%v] stop", g.Name)
 }
 
 // Shutdown stops Engine gracefully with context.
@@ -131,12 +140,12 @@ func (g *Engine) Shutdown(ctx context.Context) error {
 
 // AddConn adds conn to a poller.
 func (g *Engine) AddConn(conn net.Conn) (*Conn, error) {
-	c, err := NewConn(conn)
+	c, err := NBConn(conn)
 	if err != nil {
 		return nil, err
 	}
 
-	p := g.polls[c.Hash()%len(g.polls)]
+	p := g.pollers[c.Hash()%len(g.pollers)]
 	p.addConn(c)
 	return c, nil
 }
@@ -164,9 +173,9 @@ func (g *Engine) OnClose(h func(c *Conn, err error)) {
 }
 
 // OnRead registers callback for reading event.
-func (g *Engine) OnRead(h func(c *Conn)) {
-	g.onRead = h
-}
+//func (g *Engine) OnRead(h func(c *Conn)) {
+//	g.onRead = h
+//}
 
 // OnData registers callback for data.
 func (g *Engine) OnData(h func(c *Conn, data []byte)) {
@@ -191,6 +200,14 @@ func (g *Engine) OnReadBufferFree(h func(c *Conn, b []byte)) {
 	}
 	g.onReadBufferFree = h
 }
+
+// OnWriteBufferRelease registers callback for write buffer memory release.
+// func (g *Engine) OnWriteBufferRelease(h func(c *Conn, b []byte)) {
+// 	if h == nil {
+// 		panic("invalid nil handler")
+// 	}
+// 	g.onWriteBufferFree = h
+// }
 
 // BeforeRead registers callback before syscall.Read
 // the handler would be called on windows.
@@ -221,12 +238,14 @@ func (g *Engine) BeforeWrite(h func(c *Conn)) {
 
 // OnStop registers callback before Engine is stopped.
 func (g *Engine) OnStop(h func()) {
-	checkIsNotNull(h)
+	if h == nil {
+		panic("invalid nil handler")
+	}
 	g.onStop = h
 }
 
-// PollBuffer returns Poll's buffer by Conn, can be used on linux/bsd.
-func (g *Engine) PollBuffer(c *Conn) []byte {
+// PollerBuffer returns Poller's buffer by Conn, can be used on linux/bsd.
+func (g *Engine) PollerBuffer(c *Conn) []byte {
 	return c.p.ReadBuffer
 }
 
@@ -234,9 +253,17 @@ func (g *Engine) initHandlers() {
 	g.wgConn.Add(1)
 	g.OnOpen(func(c *Conn) {})
 	g.OnClose(func(c *Conn, err error) {})
+	// g.OnRead(func(c *Conn, b []byte) ([]byte, error) {
+	// 	n, err := c.Read(b)
+	// 	if n > 0 {
+	// 		return b[:n], err
+	// 	}
+	// 	return nil, err
+	// })
 	g.OnData(func(c *Conn, data []byte) {})
-	g.OnReadBufferAlloc(g.PollBuffer)
+	g.OnReadBufferAlloc(g.PollerBuffer)
 	g.OnReadBufferFree(func(c *Conn, buffer []byte) {})
+	// g.OnWriteBufferRelease(func(c *Conn, buffer []byte) {})
 	g.BeforeRead(func(c *Conn) {})
 	g.AfterRead(func(c *Conn) {})
 	g.BeforeWrite(func(c *Conn) {})
@@ -246,7 +273,10 @@ func (g *Engine) initHandlers() {
 		g.Execute = func(f func()) {
 			defer func() {
 				if err := recover(); err != nil {
-					log.MakeErrorLog(err)
+					const size = 64 << 10
+					buf := make([]byte, size)
+					buf = buf[:runtime.Stack(buf, false)]
+					log.Errorf("execute failed: %v\n%v\n", err, *(*string)(unsafe.Pointer(&buf)))
 				}
 			}()
 			f()
@@ -260,10 +290,4 @@ func (g *Engine) borrow(c *Conn) []byte {
 
 func (g *Engine) payback(c *Conn, buffer []byte) {
 	g.onReadBufferFree(c, buffer)
-}
-
-func checkIsNotNull(h func()) {
-	if h == nil {
-		panic("invalid nil handler")
-	}
 }
