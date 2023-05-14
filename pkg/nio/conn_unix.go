@@ -299,7 +299,7 @@ func (c *Conn) write(b []byte) (int, error) {
 	}
 
 	if len(c.writeBuffer) == 0 {
-		n, err := c.doWrite(b)
+		n, err := c.writeStream(b)
 		if err != nil && !errors.Is(err, syscall.EINTR) && !errors.Is(err, syscall.EAGAIN) {
 			return n, err
 		}
@@ -333,7 +333,7 @@ func (c *Conn) flush() error {
 
 	old := c.writeBuffer
 
-	n, err := c.doWrite(old)
+	n, err := c.writeStream(old)
 	if err != nil && !errors.Is(err, syscall.EINTR) && !errors.Is(err, syscall.EAGAIN) {
 		c.closed = true
 		c.mux.Unlock()
@@ -407,10 +407,6 @@ func (c *Conn) writev(in [][]byte) (int, error) {
 		}
 	}
 	return nwrite, nil
-}
-
-func (c *Conn) doWrite(b []byte) (int, error) {
-	return c.writeStream(b)
 }
 
 func (c *Conn) overflow(n int) bool {
