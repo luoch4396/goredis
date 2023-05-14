@@ -7,8 +7,6 @@ import (
 	"goredis/pkg/pool/bytepool"
 	"goredis/pkg/utils/timer"
 	"net"
-	"runtime"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -19,7 +17,6 @@ type Conn struct {
 	mux         sync.RWMutex
 	p           *poller
 	fd          int
-	connUDP     *udpConn
 	rTimer      *timer.Item
 	wTimer      *timer.Item
 	writeBuffer []byte
@@ -57,11 +54,6 @@ func (c *Conn) Read(b []byte) (int, error) {
 	}
 
 	return n, err
-}
-
-// ReadUDP .
-func (c *Conn) ReadUDP(b []byte) (*Conn, int, error) {
-	return c.ReadAndGetConn(b)
 }
 
 // ReadAndGetConn .
@@ -160,18 +152,6 @@ func (c *Conn) writeStream(b []byte) (int, error) {
 	return syscall.Write(c.fd, b)
 }
 
-func (c *Conn) writeUDPClientFromDial(b []byte) (int, error) {
-	return syscall.Write(c.fd, b)
-}
-
-func (c *Conn) writeUDPClientFromRead(b []byte) (int, error) {
-	err := syscall.Sendto(c.fd, b, 0, c.connUDP.rAddr)
-	if err != nil {
-		return 0, err
-	}
-	return len(b), nil
-}
-
 // Close implements Close.
 func (c *Conn) Close() error {
 	return c.closeWithError(nil)
@@ -261,33 +241,21 @@ func (c *Conn) SetNoDelay(nodelay bool) error {
 
 // SetReadBuffer implements SetReadBuffer.
 func (c *Conn) SetReadBuffer(bytes int) error {
-	return syscall.SetsockoptInt(c.fd, syscall.SOL_SOCKET, syscall.SO_RCVBUF, bytes)
+	return SetReadBuffer(c.fd, bytes)
 }
 
 // SetWriteBuffer implements SetWriteBuffer.
 func (c *Conn) SetWriteBuffer(bytes int) error {
-	return syscall.SetsockoptInt(c.fd, syscall.SOL_SOCKET, syscall.SO_SNDBUF, bytes)
+	return SetWriteBuffer(c.fd, bytes)
 }
 
 // SetKeepAlive implements SetKeepAlive.
-func (c *Conn) SetKeepAlive(keepalive bool) error {
+func (c *Conn) SetKeepAlive(keepalive bool, d time.Duration) error {
 	if keepalive {
-		return syscall.SetsockoptInt(c.fd, syscall.SOL_SOCKET, syscall.SO_KEEPALIVE, 1)
+		return SetKeepAlive(c.fd, int(d.Seconds()), keepalive)
+	} else {
+		return SetKeepAlive(c.fd, 0, keepalive)
 	}
-	return syscall.SetsockoptInt(c.fd, syscall.SOL_SOCKET, syscall.SO_KEEPALIVE, 0)
-}
-
-// SetKeepAlivePeriod implements SetKeepAlivePeriod.
-func (c *Conn) SetKeepAlivePeriod(d time.Duration) error {
-	if runtime.GOOS == "linux" {
-		d += time.Second - time.Nanosecond
-		secs := int(d.Seconds())
-		if err := syscall.SetsockoptInt(c.fd, IPPROTO_TCP, TCP_KEEPINTVL, secs); err != nil {
-			return err
-		}
-		return syscall.SetsockoptInt(c.fd, IPPROTO_TCP, TCP_KEEPIDLE, secs)
-	}
-	return errors.New("not supported")
 }
 
 // SetLinger implements SetLinger.
@@ -506,101 +474,4 @@ func NewConn(conn net.Conn) (*Conn, error) {
 		}
 	}
 	return c, nil
-}
-
-type udpConn struct {
-	parent *Conn
-
-	rAddr    syscall.Sockaddr
-	rAddrStr string
-
-	mux   sync.RWMutex
-	conns map[string]*Conn
-}
-
-func (u *udpConn) Close() error {
-	parent := u.parent
-	if parent.connUDP != u {
-		parent.mux.Lock()
-		delete(parent.connUDP.conns, u.rAddrStr)
-		parent.mux.Unlock()
-	} else {
-		syscall.Close(u.parent.fd)
-		for _, c := range u.conns {
-			c.Close()
-		}
-		u.conns = nil
-	}
-	return nil
-}
-
-func (u *udpConn) getConn(p *poller, fd int, rsa syscall.Sockaddr) (*Conn, bool) {
-	rAddrStr := getUDPNetAddrString(rsa)
-	u.mux.RLock()
-	c, ok := u.conns[rAddrStr]
-	u.mux.RUnlock()
-
-	if !ok {
-		c = &Conn{
-			p:     p,
-			fd:    fd,
-			lAddr: u.parent.lAddr,
-			rAddr: getUDPNetAddr(rsa),
-			typ:   ConnTypeUDPClientFromRead,
-			connUDP: &udpConn{
-				rAddr:    rsa,
-				rAddrStr: rAddrStr,
-				parent:   u.parent,
-			},
-		}
-		u.mux.Lock()
-		u.conns[rAddrStr] = c
-		u.mux.Unlock()
-	}
-
-	return c, ok
-}
-
-func getUDPNetAddrString(sa syscall.Sockaddr) string {
-	if sa == nil {
-		return "<nil>"
-	}
-	var ip []byte
-	var port int
-	var zone string
-
-	switch vt := sa.(type) {
-	case *syscall.SockaddrInet4:
-		ip = vt.Addr[:]
-		port = vt.Port
-		return string(ip) + strconv.Itoa(port)
-	case *syscall.SockaddrInet6:
-		ip = vt.Addr[:]
-		port = vt.Port
-		i, err := net.InterfaceByIndex(int(vt.ZoneId))
-		if err == nil && i != nil {
-			return string(ip) + i.Name + strconv.Itoa(port)
-		}
-	}
-
-	return string(ip) + zone + strconv.Itoa(port)
-}
-
-func getUDPNetAddr(sa syscall.Sockaddr) *net.UDPAddr {
-	ret := &net.UDPAddr{}
-	switch vt := sa.(type) {
-	case *syscall.SockaddrInet4:
-		ret.IP = make([]byte, len(vt.Addr))
-		copy(ret.IP[:], vt.Addr[:])
-		ret.Port = vt.Port
-	case *syscall.SockaddrInet6:
-		ret.IP = make([]byte, len(vt.Addr))
-		copy(ret.IP[:], vt.Addr[:])
-		ret.Port = vt.Port
-		i, err := net.InterfaceByIndex(int(vt.ZoneId))
-		if err == nil && i != nil {
-			ret.Zone = i.Name
-		}
-	}
-	return ret
 }

@@ -46,12 +46,12 @@ func dupStdConn(conn net.Conn) (*Conn, error) {
 	rAddr := conn.RemoteAddr()
 
 	conn.Close()
-
-	// err = syscall.SetNonblock(newFd, true)
-	// if err != nil {
-	// 	syscall.Close(newFd)
-	// 	return nil, err
-	// }
+	//设置非阻塞
+	err = syscall.SetNonblock(newFd, true)
+	if err != nil {
+		syscall.Close(newFd)
+		return nil, err
+	}
 
 	c := &Conn{
 		fd:    newFd,
@@ -64,30 +64,6 @@ func dupStdConn(conn net.Conn) (*Conn, error) {
 		c.typ = ConnTypeTCP
 	case *net.UnixConn:
 		c.typ = ConnTypeUnix
-	case *net.UDPConn:
-		lAddrUDP := lAddr.(*net.UDPAddr)
-		newLAddr := net.UDPAddr{
-			IP:   make([]byte, len(lAddrUDP.IP)),
-			Port: lAddrUDP.Port,
-			Zone: lAddrUDP.Zone,
-		}
-
-		copy(newLAddr.IP, lAddrUDP.IP)
-
-		c.lAddr = &newLAddr
-		// c.lAddr = lAddrUDP
-		if rAddr == nil {
-			c.typ = ConnTypeUDPServer
-			c.connUDP = &udpConn{
-				parent: c,
-				conns:  map[string]*Conn{},
-			}
-		} else {
-			c.typ = ConnTypeUDPClientFromDial
-			c.connUDP = &udpConn{
-				parent: c,
-			}
-		}
 	default:
 	}
 
