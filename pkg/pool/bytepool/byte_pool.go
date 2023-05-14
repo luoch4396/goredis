@@ -12,7 +12,7 @@ type Allocator interface {
 	Free(buf []byte)
 }
 
-var DefaultBytePool = NewBytePool(1024, 1024*1024*128)
+var DefaultBytePool = NewBytePool(1024*64, 1024*1024*32)
 
 type BytePool struct {
 	bufSize  int

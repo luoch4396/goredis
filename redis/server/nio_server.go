@@ -1,11 +1,26 @@
 package server
 
 import (
+	"goredis/db"
 	"goredis/interface/redis"
 	"goredis/pkg/log"
 	"goredis/pkg/nio"
+	"goredis/pkg/pool/gopool"
 	"goredis/redis/handler"
+	"time"
 )
+
+type Config struct {
+	Address  string        `config:"address"`
+	MaxConns uint32        `config:"max-conns"`
+	Timeout  time.Duration `config:"timeout"`
+}
+
+// NewRedisDB 创建redis数据库，通过处理器去调用db执行操作
+func NewRedisDB() redis.Server {
+	//todo 后期增加cluster 模式，现在仅有单机模式
+	return db.NewSingleServer()
+}
 
 func NewNioServer(config *Config, server redis.Server) {
 	engine := nio.NewEngine(nio.Config{
@@ -15,7 +30,7 @@ func NewNioServer(config *Config, server redis.Server) {
 	})
 
 	//engine.BeforeWrite(func(c *nio.Conn) {
-	//	c.SetWriteDeadline(time.Now().Add(time.Second * 5))
+	//	c.SetWriteDeadline(time.Now().Add(time.Second * 60))
 	//})
 
 	engine.OnOpen(func(c *nio.Conn) {
@@ -23,11 +38,13 @@ func NewNioServer(config *Config, server redis.Server) {
 	})
 
 	engine.OnClose(func(c *nio.Conn, err error) {
-		log.Errorf("handle message with errors: %s, channel will be closed: %s", err, c.RemoteAddr())
+		log.Errorf("`errors: %s, channel will be closed: %s", err, c.RemoteAddr())
 	})
 
 	engine.OnData(func(c *nio.Conn, data []byte) {
-		handler.Handle(c, data, server)
+		gopool.HandleGo(func() {
+			handler.Handle(c, data, server)
+		})
 	})
 
 	err := engine.Start()

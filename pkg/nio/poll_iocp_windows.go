@@ -1,11 +1,10 @@
 package nio
 
 import (
+	"goredis/pkg/log"
 	"net"
 	"runtime"
 	"time"
-
-	"github.com/lesismal/nbio/logging"
 )
 
 const (
@@ -37,7 +36,7 @@ func (p *poller) accept() error {
 		return err
 	}
 
-	c := (conn)
+	c := conn
 	o := p.g.pollers[c.Hash()%len(p.g.pollers)]
 	o.addConn(c)
 
@@ -90,8 +89,7 @@ func (p *poller) start() {
 	}
 	defer p.g.Done()
 
-	logging.Debug("NBIO[%v][%v_%v] start", p.g.Name, p.pollType, p.index)
-	defer logging.Debug("NBIO[%v][%v_%v] stopped", p.g.Name, p.pollType, p.index)
+	log.Debugf("Nio_Iocp_Poller[%v][%v_%v] start", p.g.Name, p.pollType, p.index)
 
 	if p.isListener {
 		var err error
@@ -100,11 +98,11 @@ func (p *poller) start() {
 			err = p.accept()
 			if err != nil {
 				if ne, ok := err.(net.Error); ok && ne.Timeout() {
-					logging.Error("NBIO[%v][%v_%v] Accept failed: temporary error, retrying...", p.g.Name, p.pollType, p.index)
+					log.Errorf("Nio_Iocp_Poller[%v][%v_%v] Accept failed: temporary error, retrying...", p.g.Name, p.pollType, p.index)
 					time.Sleep(time.Second / 20)
 				} else {
 					if !p.shutdown {
-						logging.Error("NBIO[%v][%v_%v] Accept failed: %v, exit...", p.g.Name, p.pollType, p.index, err)
+						log.Errorf("Nio_Iocp_Poller[%v][%v_%v] Accept failed: %v, exit...", p.g.Name, p.pollType, p.index, err)
 					}
 					break
 				}
@@ -116,7 +114,7 @@ func (p *poller) start() {
 }
 
 func (p *poller) stop() {
-	logging.Debug("NBIO[%v][%v_%v] stop...", p.g.Name, p.pollType, p.index)
+	log.Debugf("Nio_Iocp_Poller[%v][%v_%v] stop...", p.g.Name, p.pollType, p.index)
 	p.shutdown = true
 	if p.isListener {
 		p.listener.Close()
@@ -139,9 +137,9 @@ func newPoller(g *Engine, isListener bool, index int) (*poller, error) {
 		if err != nil {
 			return nil, err
 		}
-		p.pollType = "LISTENER"
+		p.pollType = "Poller-Listener"
 	} else {
-		p.pollType = "POLLER"
+		p.pollType = "Poller"
 	}
 
 	return p, nil

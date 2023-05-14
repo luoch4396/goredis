@@ -29,26 +29,18 @@ const (
 )
 
 type poller struct {
-	mux sync.Mutex
-
-	g *Engine
-
-	kfd   int
-	evtfd int
-
-	index int
-
-	shutdown bool
-
+	mux          sync.RWMutex
+	g            *Engine
+	kfd          int
+	evtfd        int
+	index        int
+	shutdown     bool
 	listener     net.Listener
 	isListener   bool
 	unixSockAddr string
-
-	ReadBuffer []byte
-
-	pollType string
-
-	eventList []syscall.Kevent_t
+	ReadBuffer   []byte
+	pollType     string
+	eventList    []syscall.Kevent_t
 }
 
 func (p *poller) addConn(c *Conn) {
@@ -58,9 +50,7 @@ func (p *poller) addConn(c *Conn) {
 		return
 	}
 	c.p = p
-	if c.typ != ConnTypeUDPServer {
-		p.g.onOpen(c)
-	}
+	p.g.onOpen(c)
 	p.g.connsUnix[fd] = c
 	p.addRead(fd)
 }
@@ -74,40 +64,50 @@ func (p *poller) deleteConn(c *Conn) {
 		return
 	}
 	fd := c.fd
-
-	if c.typ != ConnTypeUDPClientFromRead {
-		if c == p.g.connsUnix[fd] {
-			p.g.connsUnix[fd] = nil
-		}
-		p.deleteEvent(fd)
+	if c == p.g.connsUnix[fd] {
+		p.g.connsUnix[fd] = nil
 	}
-
-	if c.typ != ConnTypeUDPServer {
-		p.g.onClose(c, c.closeErr)
-	}
+	p.deleteEvent(fd)
+	p.g.onClose(c, c.closeErr)
 }
 
 func (p *poller) trigger() {
-	syscall.Kevent(p.kfd, []syscall.Kevent_t{{Ident: 0, Filter: syscall.EVFILT_USER, Fflags: syscall.NOTE_TRIGGER}}, nil, nil)
+	syscall.Kevent(p.kfd, []syscall.Kevent_t{{
+		Ident:  0,
+		Filter: syscall.EVFILT_USER,
+		Fflags: syscall.NOTE_TRIGGER,
+	}}, nil, nil)
 }
 
 func (p *poller) addRead(fd int) {
 	p.mux.Lock()
-	p.eventList = append(p.eventList, syscall.Kevent_t{Ident: uint64(fd), Flags: syscall.EV_ADD, Filter: syscall.EVFILT_READ})
+	p.eventList = append(p.eventList, syscall.Kevent_t{
+		Ident:  uint64(fd),
+		Flags:  syscall.EV_ADD,
+		Filter: syscall.EVFILT_READ,
+	})
 	p.mux.Unlock()
 	p.trigger()
 }
 
 func (p *poller) modWrite(fd int) {
 	p.mux.Lock()
-	p.eventList = append(p.eventList, syscall.Kevent_t{Ident: uint64(fd), Flags: syscall.EV_ADD, Filter: syscall.EVFILT_WRITE})
+	p.eventList = append(p.eventList, syscall.Kevent_t{
+		Ident:  uint64(fd),
+		Flags:  syscall.EV_ADD,
+		Filter: syscall.EVFILT_WRITE,
+	})
 	p.mux.Unlock()
 	p.trigger()
 }
 
 func (p *poller) deleteEvent(fd int) {
 	p.mux.Lock()
-	p.eventList = append(p.eventList, syscall.Kevent_t{Ident: uint64(fd), Flags: syscall.EV_DELETE, Filter: syscall.EVFILT_READ})
+	p.eventList = append(p.eventList, syscall.Kevent_t{
+		Ident:  uint64(fd),
+		Flags:  syscall.EV_DELETE,
+		Filter: syscall.EVFILT_READ,
+	})
 	p.mux.Unlock()
 	p.trigger()
 }
@@ -151,7 +151,6 @@ func (p *poller) readWrite(ev *syscall.Kevent_t) {
 		}
 	} else {
 		syscall.Close(fd)
-		// p.deleteEvent(fd)
 	}
 }
 
@@ -161,10 +160,7 @@ func (p *poller) start() {
 		defer runtime.UnlockOSThread()
 	}
 	defer p.g.Done()
-
-	log.Debugf("NBIO[%v][%v_%v] start", p.g.Name, p.pollType, p.index)
-	defer log.Debugf("NBIO[%v][%v_%v] stopped", p.g.Name, p.pollType, p.index)
-
+	log.Debugf("Nio_Server_Kqueue[%v][%v_%v] start", p.g.Name, p.pollType, p.index)
 	if p.isListener {
 		p.acceptorLoop()
 	} else {
@@ -183,7 +179,7 @@ func (p *poller) acceptorLoop() {
 	for !p.shutdown {
 		conn, err := p.listener.Accept()
 		if err == nil {
-			c, err := NBConn(conn)
+			c, err := NewConn(conn)
 			if err != nil {
 				conn.Close()
 				continue
@@ -191,11 +187,11 @@ func (p *poller) acceptorLoop() {
 			p.g.pollers[c.Hash()%len(p.g.pollers)].addConn(c)
 		} else {
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
-				log.Errorf("NBIO[%v][%v_%v] Accept failed: temporary error, retrying...", p.g.Name, p.pollType, p.index)
+				log.Errorf("Nio_Server_Kqueue[%v][%v_%v] Accept failed: temporary error, retrying...", p.g.Name, p.pollType, p.index)
 				time.Sleep(time.Second / 20)
 			} else {
 				if !p.shutdown {
-					log.Errorf("NBIO[%v][%v_%v] Accept failed: %v, exit...", p.g.Name, p.pollType, p.index, err)
+					log.Errorf("Nio_Server_Kqueue[%v][%v_%v] Accept failed: %v, exit...", p.g.Name, p.pollType, p.index, err)
 				}
 				break
 			}
@@ -234,7 +230,7 @@ func (p *poller) readWriteLoop() {
 }
 
 func (p *poller) stop() {
-	log.Debugf("NBIO[%v][%v_%v] stop...", p.g.Name, p.pollType, p.index)
+	log.Debugf("Nio_Server_Kqueue[%v][%v_%v] stop...", p.g.Name, p.pollType, p.index)
 	p.shutdown = true
 	if p.listener != nil {
 		p.listener.Close()
@@ -262,7 +258,7 @@ func newPoller(g *Engine, isListener bool, index int) (*poller, error) {
 			index:      index,
 			listener:   ln,
 			isListener: isListener,
-			pollType:   "LISTENER",
+			pollType:   "Poller_Listener",
 		}
 		if g.network == "unix" {
 			p.unixSockAddr = addr
@@ -292,7 +288,7 @@ func newPoller(g *Engine, isListener bool, index int) (*poller, error) {
 		kfd:        fd,
 		index:      index,
 		isListener: isListener,
-		pollType:   "POLLER",
+		pollType:   "Poller",
 	}
 
 	return p, nil

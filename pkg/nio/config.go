@@ -15,7 +15,7 @@ type Config struct {
 	// because it's too easy to write udp server/client.
 	Network string
 
-	// Addrs is the listening addr list for a nbio server.
+	// Addrs is the listening addr list for a nio server.
 	// if it is empty, no listener created, then the Engine is used for client by default.
 	Addrs []string
 
@@ -26,8 +26,8 @@ type Config struct {
 	ReadBufferSize int
 
 	// MaxWriteBufferSize represents max write buffer size for Conn, it's set to 1m by default.
-	// if the connection's Send-Q is full and the data cached by nbio is
-	// more than MaxWriteBufferSize, the connection would be closed by nbio.
+	// if the connection's Send-Q is full and the data cached by nio is
+	// more than MaxWriteBufferSize, the connection would be closed by nio.
 	MaxWriteBufferSize int
 
 	// MaxConnReadTimesPerEventLoop represents max read times in one poller loop for one fd

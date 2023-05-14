@@ -5,6 +5,7 @@ package nio
 import (
 	"errors"
 	"fmt"
+	"goredis/pkg/log"
 	"io"
 	"net"
 	"os"
@@ -12,8 +13,6 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
-
-	"github.com/lesismal/nbio/logging"
 )
 
 const (
@@ -70,7 +69,7 @@ func (p *poller) addConn(c *Conn) {
 	if err != nil {
 		p.g.connsUnix[fd] = nil
 		c.closeWithError(err)
-		logging.Error("[%v] add read event failed: %v", c.fd, err)
+		log.Errorf("[%v] add read event failed: %v", c.fd, err)
 	}
 }
 
@@ -99,8 +98,7 @@ func (p *poller) deleteConn(c *Conn) {
 func (p *poller) start() {
 	defer p.g.Done()
 
-	logging.Debug("NBIO[%v][%v_%v] start", p.g.Name, p.pollType, p.index)
-	defer logging.Debug("NBIO[%v][%v_%v] stopped", p.g.Name, p.pollType, p.index)
+	log.Debugf("Nio_Server_Epoll[%v][%v_%v] start", p.g.Name, p.pollType, p.index)
 
 	if p.isListener {
 		p.acceptorLoop()
@@ -124,7 +122,7 @@ func (p *poller) acceptorLoop() {
 		conn, err := p.listener.Accept()
 		if err == nil {
 			var c *Conn
-			c, err = NBConn(conn)
+			c, err = NewConn(conn)
 			if err != nil {
 				conn.Close()
 				continue
@@ -133,11 +131,11 @@ func (p *poller) acceptorLoop() {
 		} else {
 			var ne net.Error
 			if ok := errors.As(err, &ne); ok && ne.Timeout() {
-				logging.Error("NBIO[%v][%v_%v] Accept failed: temporary error, retrying...", p.g.Name, p.pollType, p.index)
+				log.Errorf("Nio_Server_Epoll[%v][%v_%v] Accept failed: temporary error, retrying...", p.g.Name, p.pollType, p.index)
 				time.Sleep(time.Second / 20)
 			} else {
 				if !p.shutdown {
-					logging.Error("NBIO[%v][%v_%v] Accept failed: %v, exit...", p.g.Name, p.pollType, p.index, err)
+					log.Errorf("Nio_Server_Epoll[%v][%v_%v] Accept failed: %v, exit...", p.g.Name, p.pollType, p.index, err)
 				}
 				break
 			}
@@ -224,7 +222,7 @@ func (p *poller) readWriteLoop() {
 }
 
 func (p *poller) stop() {
-	logging.Debug("NBIO[%v][%v_%v] stop...", p.g.Name, p.pollType, p.index)
+	log.Debugf("Nio_Server_Epoll[%v][%v_%v] stop...", p.g.Name, p.pollType, p.index)
 	p.shutdown = true
 	if p.listener != nil {
 		p.listener.Close()
@@ -280,7 +278,7 @@ func newPoller(g *Engine, isListener bool, index int) (*poller, error) {
 			index:      index,
 			listener:   ln,
 			isListener: isListener,
-			pollType:   "LISTENER",
+			pollType:   "Poller-Listener",
 		}
 		if g.network == "unix" {
 			p.unixSockAddr = addr
@@ -317,7 +315,7 @@ func newPoller(g *Engine, isListener bool, index int) (*poller, error) {
 		evtfd:      int(r0),
 		index:      index,
 		isListener: isListener,
-		pollType:   "POLLER",
+		pollType:   "Poller",
 	}
 
 	return p, nil

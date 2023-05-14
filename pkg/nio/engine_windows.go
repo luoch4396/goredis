@@ -1,12 +1,11 @@
 package nio
 
 import (
+	"goredis/pkg/log"
+	"goredis/pkg/utils/timer"
 	"net"
 	"runtime"
 	"strings"
-
-	"github.com/lesismal/nbio/logging"
-	"github.com/lesismal/nbio/timer"
 )
 
 // Start init and start pollers.
@@ -92,9 +91,9 @@ func (g *Engine) Start() error {
 	g.Timer.Start()
 
 	if len(g.addrs) == 0 {
-		logging.Info("NBIO[%v] start", g.Name)
+		log.Infof("Nio_Iocp_Server[%v] start", g.Name)
 	} else {
-		logging.Info("NBIO[%v] start listen on: [\"%v@%v\"]", g.Name, g.network, strings.Join(g.addrs, `", "`))
+		log.Infof("Nio_Iocp_Server[%v] start listen on: [\"%v@%v\"]", g.Name, g.network, strings.Join(g.addrs, `", "`))
 	}
 	return nil
 }

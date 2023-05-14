@@ -95,15 +95,7 @@ func (c *Conn) ReadAndGetConn(b []byte) (*Conn, int, error) {
 }
 
 func (c *Conn) doRead(b []byte) (*Conn, int, error) {
-	switch c.typ {
-	case ConnTypeTCP, ConnTypeUnix:
-		return c.readStream(b)
-	case ConnTypeUDPServer, ConnTypeUDPClientFromDial:
-		return c.readUDP(b)
-	case ConnTypeUDPClientFromRead:
-	default:
-	}
-	return c, 0, errors.New("invalid udp conn for reading")
+	return c.readStream(b)
 }
 
 func (c *Conn) readStream(b []byte) (*Conn, int, error) {
@@ -305,10 +297,7 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 
 // SetNoDelay implements SetNoDelay.
 func (c *Conn) SetNoDelay(nodelay bool) error {
-	if nodelay {
-		return syscall.SetsockoptInt(c.fd, syscall.IPPROTO_TCP, syscall.TCP_NODELAY, 1)
-	}
-	return syscall.SetsockoptInt(c.fd, syscall.IPPROTO_TCP, syscall.TCP_NODELAY, 0)
+	return SetNoDelay(c.fd, nodelay)
 }
 
 // SetReadBuffer implements SetReadBuffer.
@@ -332,7 +321,7 @@ func (c *Conn) SetKeepAlive(keepalive bool) error {
 // SetKeepAlivePeriod implements SetKeepAlivePeriod.
 func (c *Conn) SetKeepAlivePeriod(d time.Duration) error {
 	if runtime.GOOS == "linux" {
-		d += (time.Second - time.Nanosecond)
+		d += time.Second - time.Nanosecond
 		secs := int(d.Seconds())
 		if err := syscall.SetsockoptInt(c.fd, IPPROTO_TCP, TCP_KEEPINTVL, secs); err != nil {
 			return err
@@ -343,11 +332,8 @@ func (c *Conn) SetKeepAlivePeriod(d time.Duration) error {
 }
 
 // SetLinger implements SetLinger.
-func (c *Conn) SetLinger(onoff int32, linger int32) error {
-	return syscall.SetsockoptLinger(c.fd, syscall.SOL_SOCKET, syscall.SO_LINGER, &syscall.Linger{
-		Onoff:  onoff,  // 1
-		Linger: linger, // 0
-	})
+func (c *Conn) SetLinger(onOff int32, linger int32) error {
+	return SetLinger(c.fd, onOff, linger)
 }
 
 // Session returns user session.
@@ -437,7 +423,6 @@ func (c *Conn) flush() error {
 			copy(c.writeBuffer, old[n:])
 			bytepool.Free(old)
 		}
-		// c.modWrite()
 	} else {
 		bytepool.Free(old)
 		c.writeBuffer = nil
@@ -499,19 +484,7 @@ func (c *Conn) writev(in [][]byte) (int, error) {
 }
 
 func (c *Conn) doWrite(b []byte) (int, error) {
-	var err error
-	var nread int
-	switch c.typ {
-	case ConnTypeTCP, ConnTypeUnix:
-		nread, err = c.writeStream(b)
-	case ConnTypeUDPServer:
-	case ConnTypeUDPClientFromDial:
-		nread, err = c.writeUDPClientFromDial(b)
-	case ConnTypeUDPClientFromRead:
-		nread, err = c.writeUDPClientFromRead(b)
-	default:
-	}
-	return nread, err
+	return c.writeStream(b)
 }
 
 func (c *Conn) overflow(n int) bool {
@@ -570,8 +543,8 @@ func (c *Conn) closeWithErrorWithoutLock(err error) error {
 	return err
 }
 
-// NBConn converts net.Conn to *Conn.
-func NBConn(conn net.Conn) (*Conn, error) {
+// NewConn converts net.Conn to *Conn.
+func NewConn(conn net.Conn) (*Conn, error) {
 	if conn == nil {
 		return nil, errors.New("invalid conn: nil")
 	}

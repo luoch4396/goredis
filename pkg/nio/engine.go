@@ -5,10 +5,8 @@ import (
 	"goredis/pkg/log"
 	"goredis/pkg/utils/timer"
 	"net"
-	"runtime"
 	"sync"
 	"time"
-	"unsafe"
 )
 
 const (
@@ -140,7 +138,7 @@ func (g *Engine) Shutdown(ctx context.Context) error {
 
 // AddConn adds conn to a poller.
 func (g *Engine) AddConn(conn net.Conn) (*Conn, error) {
-	c, err := NBConn(conn)
+	c, err := NewConn(conn)
 	if err != nil {
 		return nil, err
 	}
@@ -273,10 +271,7 @@ func (g *Engine) initHandlers() {
 		g.Execute = func(f func()) {
 			defer func() {
 				if err := recover(); err != nil {
-					const size = 64 << 10
-					buf := make([]byte, size)
-					buf = buf[:runtime.Stack(buf, false)]
-					log.Errorf("execute failed: %v\n%v\n", err, *(*string)(unsafe.Pointer(&buf)))
+					log.MakeErrorLog(err)
 				}
 			}()
 			f()

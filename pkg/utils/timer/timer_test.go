@@ -9,7 +9,7 @@ import (
 )
 
 func TestTimer(t *testing.T) {
-	tg := NewGroup("nbio", 4, nil)
+	tg := NewGroup("nio", 4, nil)
 	tg.Start()
 	defer tg.Stop()
 

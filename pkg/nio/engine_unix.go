@@ -12,7 +12,6 @@ import (
 
 // Start init and start pollers.
 func (g *Engine) Start() error {
-	udpListeners := make([]*net.UDPConn, len(g.addrs))[0:0]
 	switch g.network {
 	case "unix", "tcp", "tcp4", "tcp6":
 		for i := range g.addrs {
@@ -25,25 +24,6 @@ func (g *Engine) Start() error {
 			}
 			g.addrs[i] = ln.listener.Addr().String()
 			g.listeners = append(g.listeners, ln)
-		}
-	case "udp", "udp4", "udp6":
-		for i, addrStr := range g.addrs {
-			addr, err := net.ResolveUDPAddr(g.network, addrStr)
-			if err != nil {
-				for j := 0; j < i; j++ {
-					udpListeners[j].Close()
-				}
-				return err
-			}
-			ln, err := g.listenUDP("udp", addr)
-			if err != nil {
-				for j := 0; j < i; j++ {
-					udpListeners[j].Close()
-				}
-				return err
-			}
-			g.addrs[i] = ln.LocalAddr().String()
-			udpListeners = append(udpListeners, ln)
 		}
 	}
 
@@ -73,31 +53,12 @@ func (g *Engine) Start() error {
 		go l.start()
 	}
 
-	for _, ln := range udpListeners {
-		_, err := g.AddConn(ln)
-		if err != nil {
-			for j := 0; j < len(g.listeners); j++ {
-				g.listeners[j].stop()
-			}
-
-			for j := 0; j < len(g.pollers); j++ {
-				g.pollers[j].stop()
-			}
-
-			for j := 0; j < len(udpListeners); j++ {
-				udpListeners[j].Close()
-			}
-
-			return err
-		}
-	}
-
 	g.Timer.Start()
 
 	if len(g.addrs) == 0 {
-		log.Infof("NBIO[%v] start", g.Name)
+		log.Infof("Nio_Server_Engine[%v] start", g.Name)
 	} else {
-		log.Infof("NBIO[%v] start listen on: [\"%v@%v\"]", g.Name, g.network, strings.Join(g.addrs, `", "`))
+		log.Infof("Nio_Server_Engine[%v] start listen on: [\"%v@%v\"]", g.Name, g.network, strings.Join(g.addrs, `", "`))
 	}
 	return nil
 }
@@ -106,7 +67,7 @@ func (g *Engine) Start() error {
 func NewEngine(conf Config) *Engine {
 	cpuNum := runtime.NumCPU()
 	if conf.Name == "" {
-		conf.Name = "NB"
+		conf.Name = "Nio"
 	}
 	if conf.NPoller <= 0 {
 		conf.NPoller = cpuNum
@@ -120,9 +81,6 @@ func NewEngine(conf Config) *Engine {
 	if conf.Listen == nil {
 		conf.Listen = net.Listen
 	}
-	if conf.ListenUDP == nil {
-		conf.ListenUDP = net.ListenUDP
-	}
 
 	g := &Engine{
 		Timer:                        timer.New(conf.Name, conf.TimerExecute),
@@ -130,12 +88,10 @@ func NewEngine(conf Config) *Engine {
 		network:                      conf.Network,
 		addrs:                        conf.Addrs,
 		listen:                       conf.Listen,
-		listenUDP:                    conf.ListenUDP,
 		pollerNum:                    conf.NPoller,
 		readBufferSize:               conf.ReadBufferSize,
 		maxWriteBufferSize:           conf.MaxWriteBufferSize,
 		maxConnReadTimesPerEventLoop: conf.MaxConnReadTimesPerEventLoop,
-		udpReadTimeout:               conf.UDPReadTimeout,
 		epollMod:                     conf.EpollMod,
 		lockListener:                 conf.LockListener,
 		lockPoller:                   conf.LockPoller,

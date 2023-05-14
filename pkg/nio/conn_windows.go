@@ -1,16 +1,13 @@
-//go:build windows
-
 package nio
 
 import (
 	"bytes"
 	"errors"
+	"goredis/pkg/utils/timer"
 	"io"
 	"net"
 	"sync"
 	"time"
-
-	"github.com/lesismal/nbio/timer"
 )
 
 // Conn wraps net.Conn.
@@ -330,7 +327,7 @@ func (c *Conn) SetReadDeadline(t time.Time) error {
 	timeout := time.Until(t)
 	if c.rTimer == nil {
 		c.rTimer = c.p.g.AfterFunc(timeout, func() {
-			c.CloseWithError(errReadTimeout)
+			c.CloseWithError(errors.New("read timeout"))
 		})
 	} else {
 		c.rTimer.Reset(timeout)
@@ -475,8 +472,8 @@ func newConn(conn net.Conn) *Conn {
 	return c
 }
 
-// NBConn converts net.Conn to *Conn.
-func NBConn(conn net.Conn) (*Conn, error) {
+// NewConn converts net.Conn to *Conn.
+func NewConn(conn net.Conn) (*Conn, error) {
 	if conn == nil {
 		return nil, errors.New("invalid conn: nil")
 	}

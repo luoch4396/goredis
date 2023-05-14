@@ -1,11 +1,9 @@
 package conn
 
 import (
-	"github.com/go-netty/go-netty"
-	"goredis/pkg/pool/gopool"
+	"goredis/pkg/nio"
 	"goredis/pkg/utils"
 	"sync"
-	"time"
 )
 
 // 对象池
@@ -18,14 +16,14 @@ var connPool = sync.Pool{
 // Builder ClientConn 建造者
 type Builder interface {
 	Build() *ClientConn
-	BuildChannel(channel netty.Channel) *ClientConnBuilder
+	BuildChannel(channel *nio.Conn) *ClientConnBuilder
 	BuildPwd(pwd string) *ClientConnBuilder
 	BuildDBIndex(dbIndex int) *ClientConnBuilder
 }
 
 type ClientConn struct {
 	//连接
-	channel netty.Channel
+	conn *nio.Conn
 	//锁
 	lock sync.Locker
 	//密码
@@ -60,8 +58,8 @@ func (builder *ClientConnBuilder) Build() *ClientConn {
 	return builder.conn
 }
 
-func (builder *ClientConnBuilder) BuildChannel(channel netty.Channel) *ClientConnBuilder {
-	builder.conn.channel = channel
+func (builder *ClientConnBuilder) BuildChannel(channel *nio.Conn) *ClientConnBuilder {
+	builder.conn.conn = channel
 	return builder
 }
 
@@ -84,24 +82,21 @@ func (conn *ClientConn) Write(b []byte) bool {
 	defer func() {
 		conn.waitFinished.Done()
 	}()
-	return conn.channel.Write(b)
+	return true
 }
 
 func (conn *ClientConn) Name() string {
-	if conn.channel != nil {
-		return conn.channel.RemoteAddr()
-	}
 	return ""
 }
 
 // Close 关闭redis客户端连接
 func (conn *ClientConn) Close() error {
 	//正常关闭客户端，并回收连接
-	conn.channel.Close(nil)
+	err := conn.conn.Close()
 	conn.password = ""
 	conn.selectedDB = 0
 	connPool.Put(conn)
-	return nil
+	return err
 }
 
 func (conn *ClientConn) GetDBIndex() int {
@@ -114,21 +109,4 @@ func (conn *ClientConn) SetPassword(password string) {
 
 func (conn *ClientConn) GetPassword() string {
 	return conn.password
-}
-
-func waitTimeout(conn *ClientConn, timeout time.Duration) bool {
-	c := make(chan struct{}, 1)
-	gopool.Go(func() {
-		defer close(c)
-		conn.waitFinished.Wait()
-		c <- struct{}{}
-	})
-	select {
-	case <-c:
-		//正常
-		return false
-	case <-time.After(timeout):
-		//超时
-		return true
-	}
 }

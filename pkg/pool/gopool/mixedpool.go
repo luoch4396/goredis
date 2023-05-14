@@ -56,15 +56,21 @@ func (mp *MixedPool) Stop() {
 	close(mp.chTask)
 }
 
-var defaultPool *MixedPool
+var parsePool *MixedPool
+var handlePool *MixedPool
 var cpus = runtime.NumCPU()
 
 func init() {
-	defaultPool = NewMixedPool(128, 4, 1024)
+	parsePool = NewMixedPool(128, 4, 1024)
+	handlePool = NewMixedPool(128, 4, 1024)
 }
 
-func Go(f func()) {
-	defaultPool.Go(f)
+func ParseGo(f func()) {
+	parsePool.Go(f)
+}
+
+func HandleGo(f func()) {
+	handlePool.Go(f)
 }
 
 func NewMixedPool(totalParallelism int, fixedSize int, bufferSize int) *MixedPool {

@@ -59,7 +59,7 @@ func Dial(network string, address string) (*Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NBConn(conn)
+	return NewConn(conn)
 }
 
 // DialTimeout wraps net.DialTimeout.
@@ -68,7 +68,7 @@ func DialTimeout(network string, address string, timeout time.Duration) (*Conn, 
 	if err != nil {
 		return nil, err
 	}
-	return NBConn(conn)
+	return NewConn(conn)
 }
 
 // Lock .
