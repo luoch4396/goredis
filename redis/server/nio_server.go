@@ -27,6 +27,7 @@ func NewNioServer(config *Config, server redis.Server) {
 		Network:            "tcp",
 		Addrs:              []string{config.Address},
 		MaxWriteBufferSize: 128 * 1024 * 1024,
+		LockListener:       true,
 	})
 
 	//engine.BeforeWrite(func(c *nio.Conn) {
@@ -34,11 +35,11 @@ func NewNioServer(config *Config, server redis.Server) {
 	//})
 
 	engine.OnOpen(func(c *nio.Conn) {
-		log.Debugf("OnOpen:", c.RemoteAddr().String())
+		//log.Debugf("OnOpen:", c.RemoteAddr().String())
 	})
 
 	engine.OnClose(func(c *nio.Conn, err error) {
-		log.Errorf("`errors: %s, channel will be closed: %s", err, c.RemoteAddr())
+		//log.Warningf("`errors: %s, channel will be closed: %s", err, c.RemoteAddr().String())
 	})
 
 	engine.OnData(func(c *nio.Conn, data []byte) {

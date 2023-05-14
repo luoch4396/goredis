@@ -125,6 +125,7 @@ func (p *poller) readWrite(ev *syscall.Kevent_t) {
 					buffer := p.g.borrow(c)
 					rc, n, err := c.ReadAndGetConn(buffer)
 					if n > 0 {
+						//TODO: 是否需要改为异步？
 						p.g.onData(rc, buffer[:n])
 					}
 					p.g.payback(c, buffer)
@@ -205,7 +206,7 @@ func (p *poller) readWriteLoop() {
 		defer runtime.UnlockOSThread()
 	}
 
-	var events = make([]syscall.Kevent_t, 1024)
+	var events = make([]syscall.Kevent_t, 1024*6)
 	var changes []syscall.Kevent_t
 
 	p.shutdown = false

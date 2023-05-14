@@ -8,6 +8,7 @@ import (
 	"net"
 	"runtime"
 	"strings"
+	"syscall"
 )
 
 // Start init and start pollers.
@@ -65,6 +66,8 @@ func (g *Engine) Start() error {
 
 // NewEngine is a factory impl.
 func NewEngine(conf Config) *Engine {
+	//提高进程优先级
+	syscall.Setpriority(syscall.PRIO_PROCESS, 0, -20)
 	cpuNum := runtime.NumCPU()
 	if conf.Name == "" {
 		conf.Name = "Nio"

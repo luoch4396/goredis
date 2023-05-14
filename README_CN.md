@@ -7,10 +7,14 @@ goredis 是一个Go语言实现的且基于NIO的Redis服务器。
 - 基于NIO(epoll,kqueue),go协程多路复用
 - 支持string
 
-#性能测试:
-win:
-mac:
-linux:
+
+#性能测试:(以下为本机模拟测试 redis 版本7.x)
+- mac环境 :m1pro 8核 16g go1.20.4 macos 12.1
+- goredis              redis 7.x
+- ping 182481 请求/秒   200000 请求/秒
+-  
+- win:
+- linux:
 
 # 目录结构
 参考包下的具体注释 mod.go

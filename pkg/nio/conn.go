@@ -3,9 +3,7 @@ package nio
 import (
 	"goredis/pkg/log"
 	"net"
-	"runtime"
 	"time"
-	"unsafe"
 )
 
 // ConnType .
@@ -113,10 +111,7 @@ func (c *Conn) Execute(f func()) bool {
 				func() {
 					defer func() {
 						if err := recover(); err != nil {
-							const size = 64 << 10
-							buf := make([]byte, size)
-							buf = buf[:runtime.Stack(buf, false)]
-							log.Errorf("conn execute failed: %v\n%v\n", err, *(*string)(unsafe.Pointer(&buf)))
+							log.MakeErrorLog(err)
 						}
 					}()
 					f()
@@ -141,7 +136,7 @@ func (c *Conn) Execute(f func()) bool {
 // MustExecute .
 func (c *Conn) MustExecute(f func()) {
 	c.mux.Lock()
-	isHead := (len(c.execList) == 0)
+	isHead := len(c.execList) == 0
 	c.execList = append(c.execList, f)
 	c.mux.Unlock()
 

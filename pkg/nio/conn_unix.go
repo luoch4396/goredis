@@ -16,35 +16,23 @@ import (
 
 // Conn implements net.Conn.
 type Conn struct {
-	mux sync.Mutex
-
-	p *poller
-
-	fd int
-
-	connUDP *udpConn
-
-	rTimer *timer.Item
-	wTimer *timer.Item
-
+	mux         sync.RWMutex
+	p           *poller
+	fd          int
+	connUDP     *udpConn
+	rTimer      *timer.Item
+	wTimer      *timer.Item
 	writeBuffer []byte
-
-	typ      ConnType
-	closed   bool
-	isWAdded bool
-	closeErr error
-
-	lAddr net.Addr
-	rAddr net.Addr
-
-	ReadBuffer []byte
-
-	session interface{}
-
+	typ         ConnType
+	closed      bool
+	isWAdded    bool
+	closeErr    error
+	lAddr       net.Addr
+	rAddr       net.Addr
+	ReadBuffer  []byte
+	session     interface{}
 	chWaitWrite chan struct{}
-
-	execList []func()
-
+	execList    []func()
 	DataHandler func(c *Conn, data []byte)
 }
 
@@ -56,14 +44,14 @@ func (c *Conn) Hash() int {
 // Read implements Read.
 func (c *Conn) Read(b []byte) (int, error) {
 	// use lock to prevent multiple conn data confusion when fd is reused on unix.
-	c.mux.Lock()
+	c.mux.RLock()
 	if c.closed {
-		c.mux.Unlock()
+		c.mux.RUnlock()
 		return 0, net.ErrClosed
 	}
 
-	_, n, err := c.doRead(b)
-	c.mux.Unlock()
+	_, n, err := c.readStream(b)
+	c.mux.RUnlock()
 	if err == nil {
 		c.p.g.afterRead(c)
 	}
@@ -79,14 +67,14 @@ func (c *Conn) ReadUDP(b []byte) (*Conn, int, error) {
 // ReadAndGetConn .
 func (c *Conn) ReadAndGetConn(b []byte) (*Conn, int, error) {
 	// use lock to prevent multiple conn data confusion when fd is reused on unix.
-	c.mux.Lock()
+	c.mux.RLock()
 	if c.closed {
-		c.mux.Unlock()
+		c.mux.RUnlock()
 		return c, 0, net.ErrClosed
 	}
 
-	dstConn, n, err := c.doRead(b)
-	c.mux.Unlock()
+	dstConn, n, err := c.readStream(b)
+	c.mux.RUnlock()
 	if err == nil {
 		c.p.g.afterRead(c)
 	}
@@ -94,38 +82,9 @@ func (c *Conn) ReadAndGetConn(b []byte) (*Conn, int, error) {
 	return dstConn, n, err
 }
 
-func (c *Conn) doRead(b []byte) (*Conn, int, error) {
-	return c.readStream(b)
-}
-
 func (c *Conn) readStream(b []byte) (*Conn, int, error) {
 	nread, err := syscall.Read(c.fd, b)
 	return c, nread, err
-}
-
-func (c *Conn) readUDP(b []byte) (*Conn, int, error) {
-	nread, rAddr, err := syscall.Recvfrom(c.fd, b, 0)
-	if c.closeErr == nil {
-		c.closeErr = err
-	}
-	if err != nil {
-		return c, 0, err
-	}
-
-	var g = c.p.g
-	var dstConn = c
-	if c.typ == ConnTypeUDPServer {
-		uc, ok := c.connUDP.getConn(c.p, c.fd, rAddr)
-		if g.udpReadTimeout > 0 {
-			uc.SetReadDeadline(time.Now().Add(g.udpReadTimeout))
-		}
-		if !ok {
-			g.onOpen(uc)
-		}
-		dstConn = uc
-	}
-
-	return dstConn, nread, err
 }
 
 // Write implements Write.
@@ -438,7 +397,6 @@ func (c *Conn) flush() error {
 			}
 		}
 	}
-
 	c.mux.Unlock()
 	return nil
 }
@@ -531,16 +489,7 @@ func (c *Conn) closeWithErrorWithoutLock(err error) error {
 	if c.p.g != nil {
 		c.p.deleteConn(c)
 	}
-
-	switch c.typ {
-	case ConnTypeTCP, ConnTypeUnix:
-		err = syscall.Close(c.fd)
-	case ConnTypeUDPServer, ConnTypeUDPClientFromDial, ConnTypeUDPClientFromRead:
-		err = c.connUDP.Close()
-	default:
-	}
-
-	return err
+	return syscall.Close(c.fd)
 }
 
 // NewConn converts net.Conn to *Conn.
